@@ -1,63 +1,81 @@
 # Charger Cluster
 
-A digital instrument cluster for a **2006 Dodge Charger** that runs in the web browser of a
-spare phone (Samsung Galaxy A34) mounted in the dash. It reads live engine data from an
-**ELM327 OBD-II adapter** over Bluetooth.
+A factory-style instrument cluster for a **2006 Dodge Charger**, running in Chrome on a spare
+**Samsung Galaxy A34** mounted in the dash. All numbers come live from a **Kingbolen ELM327**
+OBD-II adapter. There is no demo or made-up data: anything the car doesn't report shows `--` / `NO DATA`.
 
-## What it shows
+Open it on the phone: **https://hk-cpu.github.io/charger-cluster/** (after GitHub Pages is switched on).
 
-| Item | Where the data comes from |
+## What's on screen
+
+- Chrome-ringed gauges: tachometer, speedometer (km/h with an inner mph scale, or the other way round),
+  fuel and coolant temperature.
+- Needle sweep and warning-light check every time it starts, like the real cluster.
+- Centre info screen: big digital speed, plus four pages (tap it to switch):
+  battery volts / throttle, coolant / fuel, engine load / intake air, RPM / number of trouble codes.
+- Warning lights: check engine (from the car), overheat (coolant 118 °C or more),
+  charging fault (low or high voltage while the engine runs).
+- Turn signals and high beam only light during the start-up check. **The car doesn't send these
+  through the OBD port.** They need extra wiring later.
+
+## Testing in the car
+
+1. Plug the Kingbolen adapter into the OBD port under the steering wheel. Turn the **ignition ON**
+   (engine running is best).
+2. Connect it to the phone. Which steps you follow depends on your Kingbolen model:
+
+   **A. Bluetooth Classic** (shows up in Android Settings → Connections → Bluetooth, usually as
+   "OBDII" or "V-LINK", PIN `1234` or `0000`):
+   1. Pair it in Android Bluetooth settings first.
+   2. Open the dashboard link in Chrome → **MENU** → **Bluetooth Classic** → pick the adapter → **Connect**.
+   3. Needs Chrome 138 or newer. If the button is greyed out, update Chrome in the Play Store.
+
+   **B. Bluetooth LE / 4.0** (works with iPhones too, and doesn't pair in settings):
+   1. Open the dashboard → **MENU** → **Bluetooth LE / 4.0** → pick the adapter → **Pair**.
+   2. If Chrome asks for "Nearby devices" or Location permission, allow it.
+
+   **C. Wi-Fi** (the phone joins a Wi-Fi network called something like "WiFi_OBDII"):
+   browsers can't talk to Wi-Fi adapters directly, so a small free bridge app relays the data:
+   1. Install **Termux** from F-Droid (the Play Store version is outdated).
+   2. In Termux, type once: `pkg install python -y && pip install websockify`
+   3. Open the dashboard once **while you still have internet** (so it saves itself for offline use).
+   4. Join the adapter's Wi-Fi network, then in Termux type:
+      `websockify 35001 192.168.0.10:35000` and leave Termux running.
+   5. In the dashboard: **MENU** → **Wi-Fi adapter** → keep `ws://127.0.0.1:35001` → OK.
+
+3. The centre screen walks through `WAKING ADAPTER…` → `TALKING TO CAR…` → `CONNECTED`, then the
+   needles move. The green dot means data is flowing.
+4. Next time, it reconnects to the same adapter by itself. If the link drops, it retries every few seconds.
+
+### If something doesn't work
+
+Open **MENU → Connection log**, tap **Copy log** (or take a screenshot) and send it to me.
+It shows every message between the phone and the adapter.
+
+| Message | What to do |
 |---|---|
-| Speed | OBD adapter, or phone GPS |
-| RPM, coolant temp, throttle | OBD adapter |
-| Fuel level | OBD adapter, if the car reports it (shows `--` if not) |
-| Battery voltage | OBD adapter |
-| Check-engine light | OBD adapter |
-| Overheat / battery warnings | Calculated from the values above |
-| Turn signals, high beam | **Not available yet.** The car doesn't send these through the OBD port. They only light up in Demo mode for now (see "Later" below). |
+| `CAR NOT ANSWERING – IGNITION ON?` | Turn the key to ON / start the engine. Check the adapter is pushed in fully. |
+| `NO ADAPTER CHOSEN` | The adapter wasn't picked in the list. Try again, or use the other Bluetooth option. |
+| `NOT AN OBD ADAPTER` | The wrong device was picked in the BLE list. |
+| `BRIDGE APP NOT RUNNING` | Wi-Fi only: start the `websockify` command in Termux. |
+| Fuel shows `NO DATA` | Some 2006 cars don't report fuel level over OBD. That's normal, not a fault. |
 
-## How to use it on the phone
+## Other settings (MENU)
 
-1. Open the dashboard link in **Chrome** on the Samsung (it must be an `https://` link).
-2. Tap **Connect** and choose:
-   - **Demo**: fake drive, to check the screen.
-   - **GPS speed only**: no adapter needed.
-   - **OBD adapter – Bluetooth LE** or **Classic Bluetooth**, depending on your adapter (see below).
-3. Tap **Full screen**. The screen stays on while the page is open.
-4. **Dim / Night** lowers brightness for night driving. **km/h / mph** switches units.
-5. Optional: Chrome menu ⋮ → **Add to Home screen** gives it an app icon that opens full screen.
-
-### Which ELM327 do I have?
-
-- **Bluetooth LE (4.0)**: usually doesn't show up in Android's normal Bluetooth pairing list,
-  and the box or listing says "BLE" or "4.0". Use **Bluetooth LE**.
-- **Classic Bluetooth**: you pair it in Android Settings → Bluetooth (PIN is usually `1234`
-  or `0000`). First pair it there, then use **Classic Bluetooth**.
-- **Wi-Fi ELM327**: won't work, because browsers can't talk to these.
-
-If the Classic Bluetooth button is greyed out, the phone's Chrome version doesn't support it.
-The reliable fix is a Bluetooth LE adapter (around $20, for example Vgate iCar Pro BLE).
-
-The car's **ignition must be ON** for the adapter to answer.
-
-## Showing your main phone's screen at the same time
-
-Install **Headunit Reloaded** on the Samsung (this turns it into an Android Auto screen),
-then use Samsung's **split screen**: open Recent apps, tap the app icon, then
-"Open in split screen view". That puts the dashboard on one side and maps/music on the other.
-
-## Later (step 3): live turn signals and high beam
-
-These need a small ESP32 board wired to the car's indicator and high-beam wires by an
-auto electrician, sending the signals to this page. Not built yet.
+- **Units**: km/h / °C or mph / °F (the speedometer face redraws to match).
+- **Brightness**: Day / Dusk / Night.
+- **Full screen**: also locks the screen sideways. Chrome menu ⋮ → **Add to Home screen** gives an app
+  icon that always opens full screen.
+- The screen stays on while the dashboard is open.
 
 ## Safety
 
 - Keep the car's original warning lights working. This screen is extra, not a replacement.
-- A phone charging in a hot dashboard can overheat and its battery can swell.
-  Keep it out of direct sun and check it often.
+- A phone charging in a hot dashboard can overheat and its battery can swell. Keep it out of direct sun.
+- Unplug the adapter when the car is parked for days, because it slowly drains the battery.
 
 ## Files
 
-- `index.html`: the whole dashboard (no installation, no build step)
-- `manifest.json`, `icon.svg`: let it be added to the home screen as an app
+- `index.html`: the whole dashboard
+- `sw.js`: lets it open with no internet
+- `manifest.json`, `icon.svg`: home-screen app icon

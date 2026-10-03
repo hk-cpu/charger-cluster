@@ -9,187 +9,239 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
   :root {
-    --bg: #000;
-    --face: #0a0c0f;
-    --ink: #e8edf2;
-    --dim: #6b7580;
-    --off: #171c21;
-    --line: #1c2228;
-    --track: #20262d;
-    --needle: #ff4433;
-    --green: #22e06b;
-    --blue: #3d8bff;
-    --amber: #ffb020;
-    --red: #ff3b30;
+    --g: min(76vh, 28vw);          /* big gauge size */
+    --s: calc(var(--g) * .56);     /* small gauge size */
+    --ink: #f4f6f8;
+    --sub: #9aa3ad;
+    --dim: #5b636c;
+    --off: #0c0e11;
+    --needle: #ff4a1c;
+    --green: #2bff6a;
+    --blue: #3f8cff;
+    --amber: #ffae1a;
+    --red: #ff2a1f;
+    --evic: #bfe6ff;
   }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0; height: 100%; overflow: hidden;
-    background: var(--bg); color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    -webkit-user-select: none; user-select: none;
-    -webkit-tap-highlight-color: transparent;
+    margin: 0; height: 100%; overflow: hidden; background: #000; color: var(--ink);
+    font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
   }
   .app {
-    display: flex; flex-direction: column;
-    height: 100vh; height: 100dvh;
+    height: 100vh; height: 100dvh; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse 70% 60% at 50% 45%, #121417 0%, #050607 70%, #000 100%);
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
-  .dim1 .lights, .dim1 .cluster { filter: brightness(.6); }
-  .dim2 .lights, .dim2 .cluster { filter: brightness(.35); }
+  .dim1 .cluster { filter: brightness(.6); }
+  .dim2 .cluster { filter: brightness(.35); }
 
-  /* Warning / indicator lights */
-  .lights {
-    display: flex; justify-content: center; align-items: center;
-    gap: clamp(10px, 3vw, 30px); height: 14vh; min-height: 44px;
+  .cluster { display: flex; align-items: center; justify-content: center; }
+  .big   { width: var(--g); height: var(--g); position: relative; z-index: 2; flex-shrink: 0; }
+  .small { width: var(--s); height: var(--s); position: relative; z-index: 1; flex-shrink: 0; transform: translateY(-22%); }
+  .small.l { margin-right: calc(var(--g) * -.1); }
+  .small.r { margin-left:  calc(var(--g) * -.1); }
+  .center {
+    width: calc(var(--g) * .62); height: var(--g); flex-shrink: 0;
+    display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+    padding: calc(var(--g) * .04) 0 calc(var(--g) * .06);
   }
-  .light { width: clamp(26px, 8vh, 50px); height: clamp(26px, 8vh, 50px); color: var(--off); }
+
+  /* SVG gauge parts */
+  .num   { fill: var(--ink); font-weight: 700; text-anchor: middle; dominant-baseline: central; font-size: 15px; }
+  .num.s { font-size: 13px; }
+  .num.m { font-size: 11.5px; }
+  .num.red { fill: var(--red); }
+  .subn  { fill: var(--sub); font-weight: 600; text-anchor: middle; dominant-baseline: central; font-size: 7.5px; }
+  .lbl   { fill: var(--sub); text-anchor: middle; font-size: 7.5px; letter-spacing: .08em; font-weight: 600; }
+  .maj   { stroke: var(--ink); stroke-width: 2.6; }
+  .min   { stroke: #c9d0d7; stroke-width: 1.3; }
+  .maj.red, .min.red { stroke: var(--red); }
+  .needle { transition: opacity .3s; }
+  .nodata .needle { opacity: .25; }
+  .nd    { fill: var(--dim); font-size: 8px; text-anchor: middle; letter-spacing: .1em; font-weight: 700; display: none; }
+  .nodata .nd { display: block; }
+
+  /* Telltales */
+  .tt { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(var(--g) * .04) calc(var(--g) * .06); }
+  .light { width: calc(var(--g) * .12); height: calc(var(--g) * .12); color: var(--off); }
   .light svg { width: 100%; height: 100%; fill: currentColor; }
-  .light.on.green { color: var(--green); filter: drop-shadow(0 0 6px var(--green)); }
-  .light.on.blue  { color: var(--blue);  filter: drop-shadow(0 0 6px var(--blue)); }
-  .light.on.amber { color: var(--amber); filter: drop-shadow(0 0 6px var(--amber)); }
-  .light.on.red   { color: var(--red);   filter: drop-shadow(0 0 6px var(--red)); }
-  .clock {
-    min-width: 4.5em; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums;
-    font-size: clamp(14px, 4.5vh, 26px); font-weight: 600; color: var(--dim);
+  .light.on.green { color: var(--green); filter: drop-shadow(0 0 5px var(--green)); }
+  .light.on.blue  { color: var(--blue);  filter: drop-shadow(0 0 5px var(--blue)); }
+  .light.on.amber { color: var(--amber); filter: drop-shadow(0 0 5px var(--amber)); }
+  .light.on.red   { color: var(--red);   filter: drop-shadow(0 0 5px var(--red)); }
+
+  /* EVIC: the centre info display */
+  .evic {
+    width: 100%; padding: calc(var(--g) * .03) calc(var(--g) * .04);
+    background: linear-gradient(#020507, #06101a); border-radius: 6px;
+    border: 1.5px solid #3a4148; box-shadow: inset 0 0 12px rgba(0,0,0,.9), 0 0 0 1px #0b0d10;
+    font-family: "Roboto Mono", ui-monospace, Menlo, monospace; color: var(--evic);
+    text-shadow: 0 0 4px rgba(120,200,255,.45); cursor: pointer;
+  }
+  .evic .top { display: flex; justify-content: space-between; font-size: calc(var(--g) * .05); opacity: .85; }
+  .evic .spd { text-align: center; font-size: calc(var(--g) * .15); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .evic .spd small { font-size: .32em; margin-left: 4px; font-weight: 600; }
+  .evic .ln { display: flex; justify-content: space-between; gap: 4px; font-size: calc(var(--g) * .048); white-space: nowrap; overflow: hidden; }
+  .evic .msg { text-align: center; font-size: calc(var(--g) * .05); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.3em; }
+  .evic .msg.err { color: #ffb4a8; text-shadow: 0 0 4px rgba(255,90,60,.5); }
+  .dot { display: inline-block; width: .7em; height: .7em; border-radius: 50%; background: #333; vertical-align: -.05em; }
+  .dot.ok { background: var(--green); box-shadow: 0 0 4px var(--green); }
+  .dot.wait { background: var(--amber); }
+
+  .menu-btn {
+    position: fixed; right: calc(10px + env(safe-area-inset-right)); bottom: calc(8px + env(safe-area-inset-bottom));
+    background: transparent; color: #4a525b; border: 1px solid #1f252b; border-radius: 8px;
+    font: 600 12px/1 Roboto, sans-serif; letter-spacing: .12em; padding: 8px 12px; z-index: 5;
   }
 
-  /* Gauges */
-  .cluster {
-    flex: 1; min-height: 0; padding: 0 8px;
-    display: grid; grid-template-columns: 1fr minmax(130px, 22vw) 1fr;
-    align-items: center; justify-items: center;
-  }
-  .gauge { width: 100%; height: 100%; min-height: 0; }
-  .g-face   { fill: var(--face); stroke: var(--line); stroke-width: 2; }
-  .g-track  { fill: none; stroke: var(--track); stroke-width: 4; }
-  .g-red    { fill: none; stroke: var(--red); stroke-width: 4; }
-  .g-maj    { stroke: var(--ink); stroke-width: 2.2; }
-  .g-min    { stroke: var(--dim); stroke-width: 1.2; }
-  .g-lbl    { fill: var(--ink); font-size: 11px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
-  .g-unit   { fill: var(--dim); font-size: 8px; letter-spacing: .12em; text-anchor: middle; }
-  .g-val    { fill: var(--ink); font-size: 22px; font-weight: 700; text-anchor: middle; font-variant-numeric: tabular-nums; }
-  .g-needle { fill: var(--needle); }
-  .g-hub    { fill: #1d2227; stroke: #3a424b; stroke-width: 1.5; }
-
-  /* Centre info column */
-  .info { display: flex; flex-direction: column; gap: 2vh; width: 100%; }
-  .row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: .6vh; }
-  .row .k { font-size: clamp(10px, 2.4vh, 13px); color: var(--dim); letter-spacing: .12em; }
-  .row .v { font-size: clamp(16px, 5.4vh, 30px); font-weight: 600; font-variant-numeric: tabular-nums; }
-  .row .v small { font-size: .5em; color: var(--dim); margin-left: 2px; }
-
-  /* Bottom bar */
-  .bottom {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    height: 12vh; min-height: 42px; padding: 0 12px;
-  }
-  .status { font-size: 13px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); margin-right: 6px; vertical-align: middle; }
-  .status.ok .dot { background: var(--green); }
-  .status.warn .dot { background: var(--amber); }
-  .status.err .dot { background: var(--red); }
-  .btns { display: flex; gap: 6px; flex-shrink: 0; }
-  button {
-    background: #10151a; color: var(--ink); border: 1px solid #232a32; border-radius: 10px;
-    padding: 8px 12px; font: inherit; font-size: 13px; cursor: pointer;
-  }
-  button:active { background: #1a2129; }
-  button:disabled { opacity: .4; }
-
-  /* Connect sheet */
-  .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: none; align-items: center; justify-content: center; z-index: 10; }
+  /* Menus */
+  .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: none; align-items: center; justify-content: center; z-index: 10; }
   .sheet.open { display: flex; }
-  .panel { background: #0c1014; border: 1px solid #232a32; border-radius: 16px; padding: 16px; width: min(440px, calc(100vw - 32px)); max-height: 92vh; overflow: auto; }
-  .panel h2 { margin: 0 0 4px; font-size: 17px; }
-  .panel p { margin: 0 0 8px; font-size: 13px; color: var(--dim); }
-  .panel button { display: block; width: 100%; text-align: left; margin: 8px 0; padding: 12px; }
-  .panel button small { display: block; color: var(--dim); margin-top: 3px; font-size: 12px; }
-
-  @media (orientation: portrait) {
-    .cluster { grid-template-columns: 1fr; grid-template-rows: 1fr auto 1fr; padding: 8px 16px; }
-    .info { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; padding: 8px 0; }
+  .panel { background: #0c1014; border: 1px solid #262d35; border-radius: 14px; padding: 14px; width: min(560px, calc(100vw - 32px)); max-height: 92vh; overflow: auto; }
+  .panel h2 { margin: 2px 0 8px; font-size: 15px; letter-spacing: .06em; color: var(--sub); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .panel button {
+    display: block; width: 100%; text-align: left; padding: 11px 12px; border-radius: 10px;
+    background: #121820; color: var(--ink); border: 1px solid #252d36; font: 15px Roboto, sans-serif;
   }
+  .panel button small { display: block; color: var(--sub); font-size: 12px; margin-top: 3px; }
+  .panel button:disabled { opacity: .4; }
+  .panel button.wide { grid-column: span 2; text-align: center; }
+  pre.log { background: #000; color: #9fd3ff; font: 11px/1.35 ui-monospace, monospace; padding: 8px; height: 55vh; overflow: auto; white-space: pre-wrap; word-break: break-all; border-radius: 8px; margin: 0 0 8px; user-select: text; -webkit-user-select: text; }
+
+  .rotate { position: fixed; inset: 0; background: #000; display: none; align-items: center; justify-content: center; text-align: center; color: var(--sub); font-size: 16px; padding: 24px; z-index: 20; }
+  @media (orientation: portrait) and (max-width: 700px) { .rotate { display: flex; } }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6f8fa"/><stop offset=".22" stop-color="#8f969e"/>
+      <stop offset=".48" stop-color="#eef1f4"/><stop offset=".72" stop-color="#4f565e"/>
+      <stop offset="1" stop-color="#cfd4da"/>
+    </linearGradient>
+    <radialGradient id="face" cx=".5" cy=".4" r=".62">
+      <stop offset="0" stop-color="#1b1f24"/><stop offset=".7" stop-color="#0b0d10"/><stop offset="1" stop-color="#020203"/>
+    </radialGradient>
+    <radialGradient id="cap" cx=".35" cy=".3" r=".85">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#a3a9b0"/><stop offset="1" stop-color="#2e343a"/>
+    </radialGradient>
+    <linearGradient id="needleG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b91a05"/><stop offset=".5" stop-color="#ff6a35"/><stop offset="1" stop-color="#b91a05"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-10%" width="200%" height="120%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+
 <div class="app" id="app">
-
-  <div class="lights">
-    <div class="light green" id="L-left" title="Left turn">
-      <svg viewBox="0 0 24 24"><path d="M1 12 10 3v5.5h13v7H10V21z"/></svg>
-    </div>
-    <div class="light blue" id="L-high" title="High beam">
-      <svg viewBox="0 0 24 24"><path d="M13 4c5 0 9 3.6 9 8s-4 8-9 8z"/><path d="M1 6.5h9v2H1zm0 4.5h9v2H1zm0 4.5h9v2H1z"/></svg>
-    </div>
-    <div class="light amber" id="L-mil" title="Check engine">
-      <svg viewBox="0 0 24 24"><path d="M7 5h7v2h-2v2h3l2 2h2V9h2v8h-2v-2h-2l-2 3H8l-2-2H4v2H2V9h2v2h2V9h4V7H7z"/></svg>
-    </div>
-    <div class="clock" id="clock">--:--</div>
-    <div class="light red" id="L-batt" title="Battery / charging">
-      <svg viewBox="0 0 24 24"><path d="M5 5h3v2h8V5h3v2h3v13H2V7h3zm-1 4v9h16V9zm1.5 3.5h5v1.6h-5zm8 0h2v-2h1.6v2h2v1.6h-2v2h-1.6v-2h-2z"/></svg>
-    </div>
-    <div class="light red" id="L-temp" title="Engine temperature">
-      <svg viewBox="0 0 24 24"><path d="M11 2h2.6v11.3a4 4 0 1 1-2.6 0zm4 2h5v1.6h-5zm0 3.5h5v1.6h-5zm0 3.5h5v1.6h-5zM2 20c2 0 2-1.4 4-1.4 1.4 0 1.7.7 2.6 1.1-.2.7-.4 1.2-.5 1.7-1-.4-1.4-1.2-2.1-1.2-1.2 0-1.2 1.4-4 1.4zm20 0c-2 0-2-1.4-4-1.4-1.4 0-1.7.7-2.6 1.1.2.7.4 1.2.5 1.7 1-.4 1.4-1.2 2.1-1.2 1.2 0 1.2 1.4 4 1.4z"/></svg>
-    </div>
-    <div class="light green" id="L-right" title="Right turn">
-      <svg viewBox="0 0 24 24"><path d="M23 12 14 3v5.5H1v7h13V21z"/></svg>
-    </div>
-  </div>
-
   <div class="cluster">
-    <svg class="gauge" id="tach" viewBox="0 0 200 200" aria-label="Tachometer"></svg>
-    <div class="info">
-      <div class="row"><span class="k">COOLANT</span><span class="v" id="v-coolant">--</span></div>
-      <div class="row"><span class="k">FUEL</span><span class="v" id="v-fuel">--</span></div>
-      <div class="row"><span class="k">BATTERY</span><span class="v" id="v-volt">--</span></div>
-      <div class="row"><span class="k">THROTTLE</span><span class="v" id="v-throttle">--</span></div>
+    <svg class="small l" id="g-fuel" viewBox="0 0 200 200"></svg>
+    <svg class="big" id="g-tach" viewBox="0 0 200 200"></svg>
+    <div class="center">
+      <div class="tt">
+        <div class="light green" id="L-left"><svg viewBox="0 0 24 24"><path d="M1 12 10 3v5.5h13v7H10V21z"/></svg></div>
+        <div class="light blue" id="L-high"><svg viewBox="0 0 24 24"><path d="M13 4c5 0 9 3.6 9 8s-4 8-9 8z"/><path d="M1 6.5h9v2H1zm0 4.5h9v2H1zm0 4.5h9v2H1z"/></svg></div>
+        <div class="light green" id="L-right"><svg viewBox="0 0 24 24"><path d="M23 12 14 3v5.5H1v7h13V21z"/></svg></div>
+        <div class="light amber" id="L-mil"><svg viewBox="0 0 24 24"><path d="M7 5h7v2h-2v2h3l2 2h2V9h2v8h-2v-2h-2l-2 3H8l-2-2H4v2H2V9h2v2h2V9h4V7H7z"/></svg></div>
+        <div class="light red" id="L-batt"><svg viewBox="0 0 24 24"><path d="M5 5h3v2h8V5h3v2h3v13H2V7h3zm-1 4v9h16V9zm1.5 3.5h5v1.6h-5zm8 0h2v-2h1.6v2h2v1.6h-2v2h-1.6v-2h-2z"/></svg></div>
+        <div class="light red" id="L-temp"><svg viewBox="0 0 24 24"><path d="M11 2h2.6v11.3a4 4 0 1 1-2.6 0zm4 2h5v1.6h-5zm0 3.5h5v1.6h-5zm0 3.5h5v1.6h-5z"/></svg></div>
+      </div>
+      <div class="evic" id="evic" title="Tap to change page">
+        <div class="top"><span id="e-clock">--:--</span><span id="e-src"><span class="dot" id="e-dot"></span></span></div>
+        <div class="spd"><span id="e-spd">--</span><small id="e-unit">km/h</small></div>
+        <div class="ln" id="e-ln"><span></span><span></span></div>
+        <div class="msg" id="e-msg">TAP MENU TO CONNECT</div>
+      </div>
     </div>
-    <svg class="gauge" id="speedo" viewBox="0 0 200 200" aria-label="Speedometer"></svg>
-  </div>
-
-  <div class="bottom">
-    <div class="status" id="status"><span class="dot"></span><span id="status-text">Starting…</span></div>
-    <div class="btns">
-      <button id="b-connect">Connect</button>
-      <button id="b-units">km/h</button>
-      <button id="b-dim">Bright</button>
-      <button id="b-full">Full screen</button>
-    </div>
+    <svg class="big" id="g-speed" viewBox="0 0 200 200"></svg>
+    <svg class="small r" id="g-temp" viewBox="0 0 200 200"></svg>
   </div>
 </div>
 
-<div class="sheet" id="sheet">
+<button class="menu-btn" id="b-menu">MENU</button>
+
+<div class="sheet" id="menu">
   <div class="panel">
-    <h2>Data source</h2>
-    <p>Pick where the dashboard gets its numbers.</p>
-    <button data-mode="demo">Demo<small>Fake drive to test the screen. No car needed.</small></button>
-    <button data-mode="gps">GPS speed only<small>Uses the phone's location. Speed only, no wiring.</small></button>
-    <button data-mode="ble" id="m-ble">OBD adapter – Bluetooth LE<small id="m-ble-note">For BLE (Bluetooth 4.0) ELM327 adapters.</small></button>
-    <button data-mode="serial" id="m-serial">OBD adapter – Classic Bluetooth<small id="m-serial-note">For older ELM327 adapters paired in Android Bluetooth settings.</small></button>
-    <button data-mode="close">Cancel</button>
+    <h2>CONNECT ADAPTER</h2>
+    <div class="grid2">
+      <button id="c-serial">Bluetooth Classic<small id="n-serial">Adapter paired in Android Bluetooth settings (PIN 1234 / 0000)</small></button>
+      <button id="c-ble">Bluetooth LE / 4.0<small id="n-ble">Adapter that doesn't pair in settings</small></button>
+      <button id="c-wifi">Wi-Fi adapter<small>Needs the bridge app on this phone (see guide)</small></button>
+      <button id="c-gps">Phone GPS<small>Speed only, no adapter</small></button>
+      <button id="c-off" class="wide">Disconnect</button>
+    </div>
+    <h2 style="margin-top:14px">DISPLAY</h2>
+    <div class="grid2">
+      <button id="b-units">Units: km/h</button>
+      <button id="b-dim">Brightness: Day</button>
+      <button id="b-full">Full screen</button>
+      <button id="b-log">Connection log</button>
+      <button id="b-close" class="wide">Close</button>
+    </div>
   </div>
 </div>
+
+<div class="sheet" id="logsheet">
+  <div class="panel">
+    <h2>CONNECTION LOG</h2>
+    <pre class="log" id="log"></pre>
+    <div class="grid2">
+      <button id="b-copy">Copy log</button>
+      <button id="b-logclose">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="rotate">Turn the phone sideways<br>for the dashboard.</div>
 
 <script>
 (() => {
   'use strict';
+  const $ = id => document.getElementById(id);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // ---------- Settings (remembered on this phone only) ----------
+  // ---------- Settings, remembered on this phone ----------
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
   };
-  let units = store.get('units', 'kmh');   // 'kmh' | 'mph'
-  let dim = store.get('dim', 0);           // 0 | 1 | 2
+  let units = store.get('units', 'kmh');
+  let dim = store.get('dim', 0);
+  let page = store.get('page', 0);
 
-  // ---------- Live values (metric; null = unknown) ----------
-  const S = { speed: null, rpm: null, coolant: null, fuel: null, volt: null, throttle: null,
-              mil: false, left: false, right: false, high: false };
+  // ---------- Live values from the car. null = not known. No made-up numbers. ----------
+  const S = {};
+  function clearLive() {
+    Object.assign(S, { speed: null, rpm: null, coolant: null, fuel: null, volt: null, throttle: null,
+                       load: null, iat: null, mil: false, dtc: null, proto: null });
+  }
+  clearLive();
+  let srcKind = null;    // 'serial' | 'ble' | 'wifi' | 'gps' | null
+  let linkState = 'off'; // 'off' | 'wait' | 'ok'
+  let message = 'TAP MENU TO CONNECT', messageErr = false;
+  function setMsg(text, err = false, state = null) {
+    message = text; messageErr = err;
+    if (state) linkState = state;
+    log('..', text);
+  }
 
-  // ---------- Gauge drawing ----------
+  // ---------- Log (for troubleshooting in the car) ----------
+  const LOG = [];
+  function log(dir, text) {
+    const t = new Date().toTimeString().slice(0, 8);
+    LOG.push(`${t} ${dir} ${String(text).replace(/\r/g, '⏎')}`);
+    if (LOG.length > 400) LOG.splice(0, LOG.length - 400);
+    if ($('logsheet').classList.contains('open')) showLog();
+  }
+  function showLog() { const el = $('log'); el.textContent = LOG.join('\n'); el.scrollTop = el.scrollHeight; }
+
+  // ---------- Gauges ----------
   const NS = 'http://www.w3.org/2000/svg';
-  const A0 = -135, A1 = 135;
   const el = (tag, attrs, parent) => {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -197,165 +249,188 @@
     return e;
   };
   const pt = (r, deg) => { const a = (deg - 90) * Math.PI / 180; return [100 + r * Math.cos(a), 100 + r * Math.sin(a)]; };
-  const arc = (r, d0, d1) => {
+  const arcPath = (r, d0, d1) => {
     const [x0, y0] = pt(r, d0), [x1, y1] = pt(r, d1);
     return `M${x0} ${y0}A${r} ${r} 0 ${d1 - d0 > 180 ? 1 : 0} 1 ${x1} ${y1}`;
   };
 
   class Gauge {
     constructor(svg, opt) { this.svg = svg; this.cur = 0; this.target = 0; this.build(opt); }
-    build({ max, major, minor, div = 1, red = null, unit }) {
-      this.max = max;
-      this.svg.innerHTML = '';
-      el('circle', { cx: 100, cy: 100, r: 97, class: 'g-face' }, this.svg);
-      el('path', { d: arc(88, A0, A1), class: 'g-track' }, this.svg);
-      if (red !== null) el('path', { d: arc(88, this.ang(red), A1), class: 'g-red' }, this.svg);
-      for (let i = 0; i * minor <= max + 1e-9; i++) {
-        const v = i * minor, isMaj = (v % major) < 1e-6, a = this.ang(v);
-        const [x0, y0] = pt(isMaj ? 76 : 81, a), [x1, y1] = pt(88, a);
-        el('line', { x1: x0, y1: y0, x2: x1, y2: y1, class: isMaj ? 'g-maj' : 'g-min' }, this.svg);
-        if (isMaj) {
-          const [tx, ty] = pt(64, a);
-          el('text', { x: tx, y: ty, class: 'g-lbl' }, this.svg).textContent = Math.round(v / div);
+    build(o) {
+      Object.assign(this, { min: 0, a0: -125, a1: 125, red: null, sub: null, small: false, numR: 60, numClass: '' }, o);
+      const s = this.svg; s.innerHTML = '';
+      el('circle', { cx: 100, cy: 100, r: 98, fill: 'url(#chrome)' }, s);
+      el('circle', { cx: 100, cy: 100, r: 92.5, fill: '#020203' }, s);
+      el('circle', { cx: 100, cy: 100, r: 91, fill: 'url(#face)' }, s);
+      el('circle', { cx: 100, cy: 100, r: 86.5, fill: 'none', stroke: '#22272d', 'stroke-width': .8 }, s);
+      if (this.red !== null) {
+        el('path', { d: arcPath(85, this.ang(this.red), this.ang(this.max)), fill: 'none', stroke: 'var(--red)', 'stroke-width': 2.2, opacity: .9 }, s);
+      }
+      const steps = Math.round((this.max - this.min) / this.minor);
+      for (let i = 0; i <= steps; i++) {
+        const v = this.min + i * this.minor;
+        const isMaj = Math.abs(((v - this.min) / this.major) - Math.round((v - this.min) / this.major)) < 1e-6;
+        const isRed = this.red !== null && v >= this.red - 1e-6;
+        const a = this.ang(v);
+        const [x0, y0] = pt(isMaj ? 72 : 78, a), [x1, y1] = pt(84, a);
+        el('line', { x1: x0, y1: y0, x2: x1, y2: y1, class: (isMaj ? 'maj' : 'min') + (isRed ? ' red' : '') }, s);
+        if (isMaj && this.label) {
+          const txt = this.label(v);
+          if (txt !== '') {
+            const [tx, ty] = pt(this.small ? 58 : this.numR || 60, a);
+            el('text', { x: tx, y: ty, class: 'num' + (this.small ? ' s' : '') + (this.numClass ? ' ' + this.numClass : '') + (isRed ? ' red' : '') }, s).textContent = txt;
+          }
         }
       }
-      el('text', { x: 100, y: 64, class: 'g-unit' }, this.svg).textContent = unit;
-      this.valEl = el('text', { x: 100, y: 140, class: 'g-val' }, this.svg);
-      this.needle = el('g', {}, this.svg);
-      el('polygon', { points: '96.8,106 103.2,106 100.8,20 99.2,20', class: 'g-needle' }, this.needle);
-      el('circle', { cx: 100, cy: 100, r: 8, class: 'g-hub' }, this.svg);
+      if (this.sub) {  // second, smaller inner scale (km/h ↔ mph), like the factory cluster
+        for (let v = this.sub.step; v <= this.sub.max; v += this.sub.step) {
+          const [tx, ty] = pt(44, this.ang(v * this.sub.factor));
+          el('text', { x: tx, y: ty, class: 'subn' }, s).textContent = v;
+        }
+        el('text', { x: 100, y: 74, class: 'lbl' }, s).textContent = this.sub.unit;
+      }
+      if (this.unit) el('text', { x: 100, y: this.small ? 136 : 132, class: 'lbl' }, s).textContent = this.unit;
+      if (this.icon) {
+        const g = el('g', { transform: `translate(88 ${this.small ? 116 : 118}) scale(1)`, fill: 'var(--sub)' }, s);
+        el('path', { d: this.icon }, g);
+      }
+      el('text', { x: 100, y: this.small ? 154 : 152, class: 'nd' }, s).textContent = 'NO DATA';
+      this.needle = el('g', { class: 'needle', filter: 'url(#glow)' }, s);
+      const tip = this.small ? 28 : 16;
+      el('polygon', { points: `97.6,114 102.4,114 101.1,${tip + 6} 100,${tip} 98.9,${tip + 6}`, fill: 'url(#needleG)' }, this.needle);
+      el('circle', { cx: 100, cy: 100, r: this.small ? 9 : 11, fill: 'url(#cap)' }, s);
+      el('circle', { cx: 100, cy: 100, r: this.small ? 5.5 : 6.5, fill: '#0e1013' }, s);
       this.draw();
     }
-    ang(v) { return A0 + (Math.min(Math.max(v, 0), this.max) / this.max) * (A1 - A0); }
-    tick() { this.cur += (this.target - this.cur) * 0.2; this.draw(); }
+    ang(v) { const f = (Math.min(Math.max(v, this.min), this.max) - this.min) / (this.max - this.min); return this.a0 + f * (this.a1 - this.a0); }
     draw() { this.needle.setAttribute('transform', `rotate(${this.ang(this.cur)} 100 100)`); }
   }
 
-  const tach = new Gauge(document.getElementById('tach'),
-    { max: 7000, major: 1000, minor: 500, div: 1000, red: 6000, unit: '× 1000 RPM' });
-  const speedo = new Gauge(document.getElementById('speedo'), speedoOpts());
-  function speedoOpts() {
+  const ICON_FUEL = 'M2 2h9v19H2zm2 2v5h5V4zm8 3 1-1 3.5 3.5V18a1 1 0 0 0 2 0v-6.5L17 10V7h1.5l1.5 1.5V18a3 3 0 0 1-6 0V12h-1z';
+  const ICON_TEMP = 'M10 1h3v12.5a4.2 4.2 0 1 1-3 0zm5 2h5v1.6h-5zm0 3.5h5v1.6h-5zm0 3.5h5v1.6h-5z';
+
+  const tach = new Gauge($('g-tach'), {
+    max: 7000, major: 1000, minor: 250, red: 6000, label: v => v / 1000, unit: 'x1000 r/min'
+  });
+  const speed = new Gauge($('g-speed'), speedOpts());
+  function speedOpts() {
     return units === 'mph'
-      ? { max: 160, major: 20, minor: 10, unit: 'MPH' }
-      : { max: 240, major: 20, minor: 10, unit: 'KM/H' };
+      ? { max: 160, major: 20, minor: 5, label: v => v, unit: 'MPH', numClass: 'm', numR: 62,
+          sub: { max: 260, step: 40, factor: 0.621371, unit: 'km/h' } }
+      : { max: 260, major: 20, minor: 10, label: v => v, unit: 'km/h', numClass: 'm', numR: 62,
+          sub: { max: 160, step: 20, factor: 1.609344, unit: 'MPH' } };
   }
+  const fuel = new Gauge($('g-fuel'), {
+    max: 100, major: 25, minor: 12.5, a0: -60, a1: 60, red: null, small: true,
+    label: v => v === 0 ? 'E' : v === 100 ? 'F' : v === 50 ? '½' : '', icon: ICON_FUEL
+  });
+  const temp = new Gauge($('g-temp'), {
+    min: 40, max: 130, major: 45, minor: 15, a0: -60, a1: 60, red: 115, small: true,
+    label: v => v === 40 ? 'C' : v === 130 ? 'H' : '', icon: ICON_TEMP
+  });
+  const gauges = [
+    { g: tach,  read: () => S.rpm },
+    { g: speed, read: () => S.speed === null ? null : (units === 'mph' ? S.speed * 0.621371 : S.speed) },
+    { g: fuel,  read: () => S.fuel },
+    { g: temp,  read: () => S.coolant },
+  ];
 
-  // ---------- Rendering ----------
-  const $ = id => document.getElementById(id);
-  const lights = { left: $('L-left'), right: $('L-right'), high: $('L-high'), mil: $('L-mil'), batt: $('L-batt'), temp: $('L-temp') };
-  const fmt = (v, d = 0) => v === null || v === undefined || isNaN(v) ? '--' : v.toFixed(d);
+  // ---------- Telltales ----------
+  const L = { left: $('L-left'), right: $('L-right'), high: $('L-high'), mil: $('L-mil'), batt: $('L-batt'), temp: $('L-temp') };
 
-  function render() {
-    const mph = units === 'mph';
-    const spd = S.speed === null ? null : (mph ? S.speed * 0.621371 : S.speed);
-    speedo.target = spd || 0;
-    tach.target = S.rpm || 0;
-    speedo.tick(); tach.tick();
-    speedo.valEl.textContent = fmt(spd);
-    tach.valEl.textContent = S.rpm === null ? '--' : String(Math.round(S.rpm / 50) * 50);
-
-    const cool = S.coolant === null ? null : (mph ? S.coolant * 9 / 5 + 32 : S.coolant);
-    $('v-coolant').innerHTML = cool === null ? '--' : `${fmt(cool)}<small>°${mph ? 'F' : 'C'}</small>`;
-    $('v-fuel').innerHTML = S.fuel === null ? '--' : `${fmt(S.fuel)}<small>%</small>`;
-    $('v-volt').innerHTML = S.volt === null ? '--' : `${fmt(S.volt, 1)}<small>V</small>`;
-    $('v-throttle').innerHTML = S.throttle === null ? '--' : `${fmt(S.throttle)}<small>%</small>`;
-
-    // Turn signals blink on screen while the signal is "on".
-    const blink = (Date.now() % 700) < 350;
-    lights.left.classList.toggle('on', S.left && blink);
-    lights.right.classList.toggle('on', S.right && blink);
-    lights.high.classList.toggle('on', S.high);
-    lights.mil.classList.toggle('on', S.mil);
-    lights.temp.classList.toggle('on', S.coolant !== null && S.coolant >= 115);
-    lights.batt.classList.toggle('on', S.volt !== null && (S.volt < 11.8 || S.volt > 15.2));
-
-    requestAnimationFrame(render);
+  // ---------- Animation: factory-style needle sweep + bulb check at start, then live data ----------
+  const boot = performance.now();
+  const ease = x => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  function frame(now) {
+    const t = now - boot;
+    const sweep = t < 900 ? ease(t / 900) : t < 1800 ? ease(1 - (t - 900) / 900) : null;
+    for (const { g, read } of gauges) {
+      if (sweep !== null) {
+        g.target = g.min + (g.max - g.min) * sweep;
+        g.svg.classList.remove('nodata');
+        g.cur = g.target;
+      } else {
+        const v = read();
+        g.svg.classList.toggle('nodata', v === null);
+        g.target = v === null ? g.min : v;
+        g.cur += (g.target - g.cur) * 0.2;
+      }
+      g.draw();
+    }
+    const bulb = t < 2200;
+    // Turn signals and high beam are NOT available through the OBD port: they only light during the bulb check.
+    L.left.classList.toggle('on', bulb);
+    L.right.classList.toggle('on', bulb);
+    L.high.classList.toggle('on', bulb);
+    L.mil.classList.toggle('on', bulb || S.mil);
+    L.temp.classList.toggle('on', bulb || (S.coolant !== null && S.coolant >= 118));
+    L.batt.classList.toggle('on', bulb || (S.volt !== null && ((S.rpm !== null && S.rpm > 500 && S.volt < 12.8) || S.volt > 15.3)));
+    requestAnimationFrame(frame);
   }
+  requestAnimationFrame(frame);
 
-  function clock() {
-    const d = new Date();
-    $('clock').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // ---------- EVIC centre display ----------
+  const f = (v, d = 0) => v === null || v === undefined || isNaN(v) ? '--' : v.toFixed(d);
+  const tempStr = c => c === null ? '--' : units === 'mph' ? `${f(c * 9 / 5 + 32)}°F` : `${f(c)}°C`;
+  const PAGES = [
+    () => [`BAT ${f(S.volt, 1)}V`, `THR ${f(S.throttle)}%`],
+    () => [`CLT ${tempStr(S.coolant)}`, `FUEL ${f(S.fuel)}%`],
+    () => [`LOAD ${f(S.load)}%`, `AIR ${tempStr(S.iat)}`],
+    () => [`RPM ${S.rpm === null ? '--' : Math.round(S.rpm)}`, `DTC ${S.dtc === null ? '--' : S.dtc}`],
+  ];
+  function evic() {
+    $('e-clock').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const spd = gauges[1].read();
+    $('e-spd').textContent = spd === null ? '--' : Math.round(spd);
+    $('e-unit').textContent = units === 'mph' ? 'MPH' : 'km/h';
+    const [a, b] = PAGES[page % PAGES.length]();
+    const ln = $('e-ln').children; ln[0].textContent = a; ln[1].textContent = b;
+    const m = $('e-msg'); m.textContent = message; m.classList.toggle('err', messageErr);
+    $('e-dot').className = 'dot ' + (linkState === 'ok' ? 'ok' : linkState === 'wait' ? 'wait' : '');
   }
-  setInterval(clock, 5000); clock();
+  setInterval(evic, 250); evic();
+  $('evic').onclick = () => { page = (page + 1) % PAGES.length; store.set('page', page); evic(); };
 
-  function status(text, kind = '') {
-    $('status-text').textContent = text;
-    $('status').className = 'status ' + kind;
-  }
-
-  // ---------- Data sources ----------
-  let stopCurrent = () => {};
-  function resetValues() {
-    Object.assign(S, { speed: null, rpm: null, coolant: null, fuel: null, volt: null, throttle: null,
-                       mil: false, left: false, right: false, high: false });
-  }
-
-  function startDemo() {
-    resetValues();
-    const t0 = performance.now();
-    let prevSpeed = 0;
-    const id = setInterval(() => {
-      const t = (performance.now() - t0) / 1000;
-      const speed = Math.max(0, 85 + 75 * Math.sin(t / 7));
-      const gearSpan = 38;
-      S.speed = speed;
-      S.rpm = speed < 3 ? 750 : 1100 + ((speed % gearSpan) / gearSpan) * 3800;
-      S.throttle = Math.max(4, Math.min(95, 15 + (speed - prevSpeed) * 120));
-      prevSpeed = speed;
-      S.coolant = Math.min(92, 40 + t * 2);
-      S.fuel = 62; S.volt = 14.1;
-      const c = t % 24;
-      S.left = c > 2 && c < 6;
-      S.right = c > 14 && c < 18;
-      S.high = c > 8 && c < 12;
-      S.mil = c > 20 && c < 22;
-    }, 50);
-    status('Demo mode – fake data', 'warn');
-    return () => clearInterval(id);
-  }
-
-  function startGps() {
-    resetValues();
-    if (!('geolocation' in navigator)) { status('This browser has no GPS access', 'err'); return () => {}; }
-    status('GPS – waiting for signal…', 'warn');
-    const id = navigator.geolocation.watchPosition(p => {
-      S.speed = p.coords.speed === null ? 0 : p.coords.speed * 3.6;
-      status(`GPS – accuracy ±${Math.round(p.coords.accuracy)} m`, 'ok');
-    }, e => {
-      status(e.code === 1 ? 'GPS – location permission denied' : 'GPS – no signal', 'err');
-    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
-    return () => navigator.geolocation.clearWatch(id);
-  }
-
-  // --- ELM327 OBD adapter ---
-  class Elm327 {
-    constructor(transport) {
-      this.t = transport; this.buf = ''; this.wait = null;
-      transport.onData(s => {
-        this.buf += s;
-        const i = this.buf.indexOf('>');
-        if (i >= 0 && this.wait) {
-          const reply = this.buf.slice(0, i);
-          this.buf = this.buf.slice(i + 1);
-          const w = this.wait; this.wait = null;
-          clearTimeout(w.timer); w.resolve(reply);
-        }
+  // ---------- ELM327 protocol ----------
+  class Elm {
+    constructor(t) {
+      this.t = t; this.buf = ''; this.wait = null; this.dead = null;
+      t.onData(s => { this.buf += s; this.flush(); });
+      t.onClose(() => {
+        this.dead = new Error('Adapter disconnected');
+        if (this.wait) { const w = this.wait; this.wait = null; clearTimeout(w.timer); w.reject(this.dead); }
       });
     }
-    send(cmd, ms = 2500) {
+    flush() {
+      const i = this.buf.indexOf('>');
+      if (i < 0 || !this.wait) return;
+      const reply = this.buf.slice(0, i).replace(/[\r\n]+/g, ' ').trim();
+      this.buf = this.buf.slice(i + 1);
+      const w = this.wait; this.wait = null; clearTimeout(w.timer);
+      log('RX', reply);
+      w.resolve(reply);
+    }
+    send(cmd, ms = 2000) {
+      if (this.dead) return Promise.reject(this.dead);
       return new Promise((resolve, reject) => {
         this.buf = '';
-        const timer = setTimeout(() => { this.wait = null; reject(new Error('timeout ' + cmd)); }, ms);
-        this.wait = { resolve, timer };
-        Promise.resolve(this.t.write(cmd + '\r')).catch(err => { clearTimeout(timer); this.wait = null; reject(err); });
+        log('TX', cmd);
+        const timer = setTimeout(() => {
+          this.wait = null; log('--', 'no reply to ' + cmd);
+          const e = new Error('No reply to ' + cmd); e.timeout = true; reject(e);
+        }, ms);
+        this.wait = { resolve, reject, timer };
+        Promise.resolve().then(() => this.t.write(cmd + '\r')).catch(err => {
+          clearTimeout(timer); this.wait = null; reject(err);
+        });
       });
     }
   }
 
-  // Pull the data bytes for "01 xx" out of an ELM327 reply such as "410D3C".
+  const hex2 = n => n.toString(16).toUpperCase().padStart(2, '0');
   function pidBytes(reply, pid) {
     const s = reply.replace(/\s/g, '').toUpperCase();
-    const i = s.indexOf('41' + pid);
+    const i = s.indexOf('41' + hex2(pid));
     if (i < 0) return null;
     const out = [];
     for (let j = i + 4; j + 1 < s.length && out.length < 4; j += 2) {
@@ -365,55 +440,82 @@
     }
     return out.length ? out : null;
   }
+  function supportedSet(reply, base) {
+    const set = new Set();
+    const s = reply.replace(/\s/g, '').toUpperCase(), key = '41' + hex2(base);
+    for (let i = s.indexOf(key); i >= 0; i = s.indexOf(key, i + 4)) {
+      for (let k = 0; k < 4; k++) {
+        const b = parseInt(s.substr(i + 4 + k * 2, 2), 16);
+        if (isNaN(b)) break;
+        for (let bit = 0; bit < 8; bit++) if (b & (0x80 >> bit)) set.add(base + k * 8 + bit + 1);
+      }
+    }
+    return set;
+  }
+  const notTimeout = e => { if (!e.timeout) throw e; };
 
-  async function runObd(transport, isActive) {
-    const elm = new Elm327(transport);
-    status('OBD – waking adapter…', 'warn');
-    try { await elm.send('ATZ', 5000); } catch {}
+  async function runObd(sess, t) {
+    const elm = new Elm(t);
+    setMsg('WAKING ADAPTER…', false, 'wait');
+    try { await elm.send('ATZ', 4000); } catch (e) { notTimeout(e); }
+    await sleep(300);
     for (const c of ['ATE0', 'ATL0', 'ATS0', 'ATH0', 'ATAT1', 'ATSP0']) {
-      try { await elm.send(c); } catch {}
+      try { await elm.send(c); } catch (e) { notTimeout(e); }
     }
-    status('OBD – talking to the car…', 'warn');
-    const hello = await elm.send('0100', 12000);
-    if (!pidBytes(hello, '00')) {
-      throw new Error('Car not answering. Is the ignition ON?');
+    setMsg('TALKING TO CAR…', false, 'wait');
+    let hello;
+    try { hello = await elm.send('0100', 12000); }
+    catch (e) { notTimeout(e); throw new Error('CAR NOT ANSWERING – IGNITION ON?'); }
+    const sup = supportedSet(hello, 0);
+    if (!sup.size) throw new Error(/UNABLE|NO ?DATA|ERROR|BUS|STOPPED|CAN/i.test(hello)
+      ? 'CAR NOT ANSWERING – IGNITION ON?' : 'ODD REPLY: ' + hello.slice(0, 24));
+    if (sup.has(0x20)) {
+      try { supportedSet(await elm.send('0120', 3000), 0x20).forEach(x => sup.add(x)); } catch (e) { notTimeout(e); }
     }
-    status(`OBD – connected${transport.name ? ' to ' + transport.name : ''}`, 'ok');
+    log('..', 'car supports PIDs: ' + [...sup].map(hex2).join(' '));
+    try { S.proto = (await elm.send('ATDP')).replace(/^AUTO,?\s*/i, ''); } catch (e) { notTimeout(e); }
+    setMsg('CONNECTED' + (S.proto ? ' · ' + S.proto : ''), false, 'ok');
 
     let misses = 0, n = 0;
     const ask = async (pid, len, fn) => {
+      if (!sup.has(pid)) return;
       try {
-        const b = pidBytes(await elm.send('01' + pid), pid);
+        const b = pidBytes(await elm.send('01' + hex2(pid)), pid);
         misses = 0;
         if (b && b.length >= len) fn(b);
       } catch (e) {
-        if (++misses > 6) throw new Error('Lost connection to adapter');
+        notTimeout(e);
+        if (++misses > 8) throw new Error('ADAPTER STOPPED ANSWERING');
       }
     };
-    while (isActive()) {
-      await ask('0D', 1, b => S.speed = b[0]);
-      await ask('0C', 2, b => S.rpm = (b[0] * 256 + b[1]) / 4);
-      if (n % 6 === 0) {
-        await ask('05', 1, b => S.coolant = b[0] - 40);
-        await ask('11', 1, b => S.throttle = b[0] * 100 / 255);
+    while (sess.active) {
+      await ask(0x0D, 1, b => { S.speed = b[0]; });
+      await ask(0x0C, 2, b => { S.rpm = (b[0] * 256 + b[1]) / 4; });
+      if (n % 5 === 0) {
+        await ask(0x05, 1, b => { S.coolant = b[0] - 40; });
+        await ask(0x11, 1, b => { S.throttle = b[0] * 100 / 255; });
+        await ask(0x04, 1, b => { S.load = b[0] * 100 / 255; });
       }
-      if (n % 30 === 0) {
-        await ask('2F', 1, b => S.fuel = b[0] * 100 / 255);
-        await ask('01', 1, b => S.mil = (b[0] & 0x80) !== 0);
+      if (n % 25 === 0) {
+        await ask(0x2F, 1, b => { S.fuel = b[0] * 100 / 255; });
+        await ask(0x0F, 1, b => { S.iat = b[0] - 40; });
+        await ask(0x01, 1, b => { S.mil = (b[0] & 0x80) !== 0; S.dtc = b[0] & 0x7F; });
         try {
           const v = parseFloat((await elm.send('ATRV')).replace(/[^\d.]/g, ''));
           if (!isNaN(v)) S.volt = v;
-        } catch {}
+        } catch (e) { notTimeout(e); }
       }
       n++;
     }
   }
 
-  // Bluetooth LE adapters (Web Bluetooth). Common ELM327 BLE service IDs.
-  const BLE_SERVICES = [0xfff0, 0xffe0, 0x18f0, 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
-  async function bleTransport() {
-    const dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: BLE_SERVICES });
-    status('OBD – connecting to ' + (dev.name || 'adapter') + '…', 'warn');
+  // ---------- Connections ----------
+  const enc = new TextEncoder();
+
+  // Bluetooth LE (Web Bluetooth). Service IDs used by common ELM327 BLE adapters.
+  const BLE_SERVICES = [0xfff0, 0xffe0, 0x18f0, 0xae00, 0xae30, 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
+  async function openBle(dev) {
+    setMsg('CONNECTING TO ' + (dev.name || 'ADAPTER').toUpperCase() + '…', false, 'wait');
     const server = await dev.gatt.connect();
     let wr = null, nt = null;
     for (const uuid of BLE_SERVICES) {
@@ -421,140 +523,248 @@
       try { svc = await server.getPrimaryService(uuid); } catch { continue; }
       let w = null, n = null;
       for (const c of await svc.getCharacteristics()) {
+        log('..', `BLE ${svc.uuid.slice(4, 8)} char ${c.uuid.slice(4, 8)} ${c.properties.notify ? 'N' : ''}${c.properties.write ? 'W' : ''}${c.properties.writeWithoutResponse ? 'w' : ''}`);
         if (!n && (c.properties.notify || c.properties.indicate)) n = c;
         if (!w && (c.properties.write || c.properties.writeWithoutResponse)) w = c;
       }
       if (w && n) { wr = w; nt = n; break; }
     }
-    if (!wr) { dev.gatt.disconnect(); throw new Error('This device is not a supported OBD adapter'); }
+    if (!wr) { try { dev.gatt.disconnect(); } catch {} throw new Error('NOT AN OBD ADAPTER (NO SERIAL SERVICE)'); }
+    const dec = new TextDecoder();
+    let dataCb = () => {}, closeCb = () => {};
+    const onVal = e => dataCb(dec.decode(e.target.value));
+    const onDisc = () => closeCb();
+    nt.addEventListener('characteristicvaluechanged', onVal);
+    dev.addEventListener('gattserverdisconnected', onDisc);
     await nt.startNotifications();
-    const dec = new TextDecoder(), enc = new TextEncoder();
-    let cb = () => {};
-    nt.addEventListener('characteristicvaluechanged', e => cb(dec.decode(e.target.value)));
+    const useNoResp = wr.properties.writeWithoutResponse && !wr.properties.write;
     return {
-      name: dev.name,
-      write: s => wr.properties.writeWithoutResponse
-        ? wr.writeValueWithoutResponse(enc.encode(s))
-        : wr.writeValue(enc.encode(s)),
-      onData: f => { cb = f; },
-      close: () => { try { dev.gatt.disconnect(); } catch {} }
+      write: s => useNoResp ? wr.writeValueWithoutResponse(enc.encode(s)) : wr.writeValue(enc.encode(s)),
+      onData: fn => { dataCb = fn; },
+      onClose: fn => { closeCb = fn; },
+      close: async () => {
+        nt.removeEventListener('characteristicvaluechanged', onVal);
+        dev.removeEventListener('gattserverdisconnected', onDisc);
+        try { dev.gatt.disconnect(); } catch {}
+      }
     };
   }
 
-  // Classic Bluetooth adapters (Web Serial, Bluetooth serial port profile).
+  // Bluetooth Classic (Web Serial over the Bluetooth serial port profile).
   const SPP = '00001101-0000-1000-8000-00805f9b34fb';
-  async function serialTransport() {
-    const port = await navigator.serial.requestPort({ allowedBluetoothServiceClassIds: [SPP] });
-    status('OBD – opening adapter…', 'warn');
+  async function openSerial(port) {
+    setMsg('OPENING ADAPTER…', false, 'wait');
     await port.open({ baudRate: 38400 });
-    const writer = port.writable.getWriter();
-    const reader = port.readable.getReader();
-    const enc = new TextEncoder(), dec = new TextDecoder();
-    let cb = () => {}, open = true;
+    const reader = port.readable.getReader(), writer = port.writable.getWriter();
+    const dec = new TextDecoder();
+    let dataCb = () => {}, closeCb = () => {}, closed = false;
     (async () => {
       try {
-        while (open) {
+        for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
-          if (value) cb(dec.decode(value));
+          if (value) dataCb(dec.decode(value, { stream: true }));
         }
-      } catch {}
+      } catch (e) { log('--', 'serial: ' + e.message); }
+      if (!closed) { closed = true; closeCb(); }
     })();
     return {
-      name: 'ELM327',
       write: s => writer.write(enc.encode(s)),
-      onData: f => { cb = f; },
+      onData: fn => { dataCb = fn; },
+      onClose: fn => { closeCb = fn; },
       close: async () => {
-        open = false;
+        closed = true;
         try { await reader.cancel(); } catch {}
-        try { reader.releaseLock(); writer.releaseLock(); await port.close(); } catch {}
+        try { reader.releaseLock(); } catch {}
+        try { writer.releaseLock(); } catch {}
+        try { await port.close(); } catch {}
       }
     };
   }
 
-  function startObd(makeTransport) {
-    resetValues();
-    let active = true, transport = null;
-    (async () => {
+  // Wi-Fi adapter, through a WebSocket bridge app running on this phone (browsers can't open raw TCP).
+  function openWifi(url) {
+    setMsg('CONNECTING TO BRIDGE…', false, 'wait');
+    return new Promise((resolve, reject) => {
+      let ws;
+      try { ws = new WebSocket(url); } catch (e) { reject(new Error('BAD BRIDGE ADDRESS')); return; }
+      ws.binaryType = 'arraybuffer';
+      const dec = new TextDecoder();
+      let dataCb = () => {}, closeCb = () => {}, opened = false;
+      const timer = setTimeout(() => { try { ws.close(); } catch {} reject(new Error('BRIDGE APP NOT RUNNING')); }, 6000);
+      ws.onopen = () => {
+        opened = true; clearTimeout(timer);
+        resolve({
+          write: s => ws.send(enc.encode(s)),
+          onData: fn => { dataCb = fn; },
+          onClose: fn => { closeCb = fn; },
+          close: async () => { try { ws.close(); } catch {} }
+        });
+      };
+      ws.onmessage = e => dataCb(typeof e.data === 'string' ? e.data : dec.decode(e.data));
+      ws.onclose = () => { clearTimeout(timer); if (!opened) reject(new Error('BRIDGE APP NOT RUNNING')); else closeCb(); };
+    });
+  }
+
+  const OPEN = { ble: openBle, serial: openSerial, wifi: openWifi };
+  let session = null;
+
+  async function stopSession() {
+    const s = session; session = null;
+    if (!s) return;
+    s.active = false;
+    if (s.stop) s.stop();
+    if (s.t) { const t = s.t; s.t = null; try { await t.close(); } catch {} }
+    clearLive(); srcKind = null;
+    setMsg('DISCONNECTED', false, 'off');
+  }
+
+  async function startSession(kind, handle) {
+    await stopSession();
+    const s = { active: true }; session = s; srcKind = kind;
+    store.set('kind', kind);
+    if (kind === 'gps') { startGps(s); return; }
+    while (s.active) {
+      let errText = null;
       try {
-        transport = await makeTransport();
-        if (!active) { transport.close(); return; }
-        await runObd(transport, () => active);
+        s.t = await OPEN[kind](handle);
+        if (!s.active) break;
+        await runObd(s, s.t);
       } catch (e) {
-        if (!active) return;
-        const msg = e && e.name === 'NotFoundError' ? 'No adapter chosen' : (e && e.message) || String(e);
-        status('OBD – ' + msg, 'err');
+        errText = (e && e.message ? e.message : String(e)).toUpperCase();
+        log('!!', errText);
       }
-    })();
-    return () => { active = false; if (transport) transport.close(); };
+      if (s.t) { const t = s.t; s.t = null; try { await t.close(); } catch {} }
+      clearLive();
+      if (!s.active) break;
+      for (let i = 5; i > 0 && s.active; i--) {
+        setMsg(`${errText || 'CONNECTION LOST'} · RETRY ${i}`, true, 'wait');
+        await sleep(1000);
+      }
+    }
   }
 
-  function setMode(mode) {
-    stopCurrent();
-    if (mode === 'demo') stopCurrent = startDemo();
-    else if (mode === 'gps') stopCurrent = startGps();
-    else if (mode === 'ble') stopCurrent = startObd(bleTransport);
-    else if (mode === 'serial') stopCurrent = startObd(serialTransport);
-    if (mode === 'demo' || mode === 'gps') store.set('mode', mode);
+  function startGps(s) {
+    if (!navigator.geolocation) { setMsg('NO GPS IN THIS BROWSER', true, 'off'); return; }
+    setMsg('GPS – WAITING FOR SIGNAL', false, 'wait');
+    const id = navigator.geolocation.watchPosition(p => {
+      if (!s.active) return;
+      S.speed = p.coords.speed === null ? null : p.coords.speed * 3.6;
+      message = `GPS ±${Math.round(p.coords.accuracy)} m · SPEED ONLY`; messageErr = false; linkState = 'ok';
+    }, e => {
+      S.speed = null;
+      setMsg(e.code === 1 ? 'GPS PERMISSION DENIED' : 'GPS – NO SIGNAL', true, 'wait');
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+    s.stop = () => navigator.geolocation.clearWatch(id);
   }
 
-  // ---------- Buttons ----------
-  const sheet = $('sheet');
-  if (!navigator.bluetooth) {
-    $('m-ble').disabled = true;
-    $('m-ble-note').textContent = 'Not available in this browser. Use Chrome on Android, opened from an https:// link.';
-  }
-  if (!navigator.serial) {
-    $('m-serial').disabled = true;
-    $('m-serial-note').textContent = 'Not available in this browser. Update Chrome, or use a Bluetooth LE adapter.';
-  }
-  $('b-connect').onclick = () => sheet.classList.add('open');
-  sheet.addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (e.target === sheet || (b && b.dataset.mode === 'close')) { sheet.classList.remove('open'); return; }
-    if (b && b.dataset.mode) { sheet.classList.remove('open'); setMode(b.dataset.mode); keepAwake(); }
-  });
+  // ---------- Menu ----------
+  const menu = $('menu'), logsheet = $('logsheet');
+  const closeMenu = () => menu.classList.remove('open');
+  $('b-menu').onclick = () => menu.classList.add('open');
+  $('b-close').onclick = closeMenu;
+  menu.addEventListener('click', e => { if (e.target === menu) closeMenu(); });
 
-  const unitsBtn = $('b-units');
-  const showUnits = () => { unitsBtn.textContent = units === 'mph' ? 'mph' : 'km/h'; };
-  unitsBtn.onclick = () => {
-    units = units === 'mph' ? 'kmh' : 'mph';
-    store.set('units', units);
-    speedo.build(speedoOpts());
-    showUnits();
+  if (!navigator.serial) { $('c-serial').disabled = true; $('n-serial').textContent = 'Needs Chrome 138 or newer on Android (update Chrome)'; }
+  if (!navigator.bluetooth) { $('c-ble').disabled = true; $('n-ble').textContent = 'Needs Chrome, opened from the https:// link'; }
+
+  const pickError = e => {
+    if (e && e.name === 'NotFoundError') setMsg('NO ADAPTER CHOSEN', true);
+    else setMsg(((e && e.message) || String(e)).toUpperCase(), true);
+  };
+  $('c-serial').onclick = async () => {
+    closeMenu();
+    try {
+      const port = await navigator.serial.requestPort({ allowedBluetoothServiceClassIds: [SPP] });
+      startSession('serial', port); keepAwake();
+    } catch (e) { pickError(e); }
+  };
+  $('c-ble').onclick = async () => {
+    closeMenu();
+    try {
+      const dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: BLE_SERVICES });
+      store.set('bleId', dev.id);
+      startSession('ble', dev); keepAwake();
+    } catch (e) { pickError(e); }
+  };
+  $('c-wifi').onclick = () => {
+    closeMenu();
+    const url = prompt('Bridge address (from the guide):', store.get('wsUrl', 'ws://127.0.0.1:35001'));
+    if (!url) return;
+    store.set('wsUrl', url.trim());
+    startSession('wifi', url.trim()); keepAwake();
+  };
+  $('c-gps').onclick = () => { closeMenu(); startSession('gps'); keepAwake(); };
+  $('c-off').onclick = () => { closeMenu(); store.set('kind', null); stopSession(); };
+
+  const showUnits = () => { $('b-units').textContent = 'Units: ' + (units === 'mph' ? 'mph / °F' : 'km/h / °C'); };
+  $('b-units').onclick = () => {
+    units = units === 'mph' ? 'kmh' : 'mph'; store.set('units', units);
+    speed.build(speedOpts()); showUnits(); evic();
   };
   showUnits();
 
-  const dimBtn = $('b-dim');
   const showDim = () => {
     $('app').classList.remove('dim1', 'dim2');
     if (dim) $('app').classList.add('dim' + dim);
-    dimBtn.textContent = ['Bright', 'Dim', 'Night'][dim];
+    $('b-dim').textContent = 'Brightness: ' + ['Day', 'Dusk', 'Night'][dim];
   };
-  dimBtn.onclick = () => { dim = (dim + 1) % 3; store.set('dim', dim); showDim(); };
+  $('b-dim').onclick = () => { dim = (dim + 1) % 3; store.set('dim', dim); showDim(); };
   showDim();
 
   $('b-full').onclick = async () => {
-    try {
-      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-      else await document.exitFullscreen();
-    } catch {}
+    closeMenu();
+    try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch {}
     try { await screen.orientation.lock('landscape'); } catch {}
     keepAwake();
   };
 
-  // Keep the screen from turning off while the dashboard is open.
+  $('b-log').onclick = () => { closeMenu(); showLog(); logsheet.classList.add('open'); };
+  $('b-logclose').onclick = () => logsheet.classList.remove('open');
+  $('b-copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(LOG.join('\n')); $('b-copy').textContent = 'Copied ✓'; }
+    catch { $('b-copy').textContent = 'Copy failed – screenshot instead'; }
+    setTimeout(() => { $('b-copy').textContent = 'Copy log'; }, 2000);
+  };
+
+  // Keep the screen on while the dashboard is open.
   let wakeLock = null;
   async function keepAwake() {
-    try { if (!wakeLock && navigator.wakeLock) {
-      wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener('release', () => { wakeLock = null; });
-    } } catch {}
+    try {
+      if (!wakeLock && navigator.wakeLock) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } catch {}
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+  document.addEventListener('click', keepAwake, { once: true });
 
-  setMode(store.get('mode', 'demo'));
-  requestAnimationFrame(render);
+  // ---------- Reconnect to the last adapter automatically ----------
+  async function autoConnect() {
+    const kind = store.get('kind', null);
+    try {
+      if (kind === 'serial' && navigator.serial) {
+        const ports = await navigator.serial.getPorts();
+        if (ports.length) return startSession('serial', ports[0]);
+      } else if (kind === 'ble' && navigator.bluetooth && navigator.bluetooth.getDevices) {
+        const devs = await navigator.bluetooth.getDevices();
+        const d = devs.find(x => x.id === store.get('bleId', '')) || devs[0];
+        if (d) return startSession('ble', d);
+      } else if (kind === 'wifi') {
+        return startSession('wifi', store.get('wsUrl', 'ws://127.0.0.1:35001'));
+      } else if (kind === 'gps') {
+        return startSession('gps');
+      }
+    } catch (e) { log('!!', 'auto-connect: ' + e.message); }
+    setMsg(kind ? 'TAP MENU › CONNECT' : 'TAP MENU TO CONNECT', false, 'off');
+  }
+  setTimeout(autoConnect, 2300);
+
+  // Works offline (e.g. when the phone is on the adapter's Wi-Fi with no internet).
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
 })();
 </script>
 </body>
