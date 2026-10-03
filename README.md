@@ -10,7 +10,7 @@ Open it on the phone: **https://hk-cpu.github.io/charger-cluster/** (after GitHu
 
 Laid out like the real 2006 cluster, left to right: **fuel, speedometer, tachometer, coolant temp**.
 
-- Satin-silver faces with black markings, red needles and chrome rings. The speedometer is 0–240 km/h
+- Satin-silver faces with black markings, red needles and chrome rings. The speedometer is 0–260 km/h
   with the inner MPH scale (switchable to MPH first). The tachometer is 0–7 ×1000.
 - Needle sweep and warning-light check every time it starts, like the real cluster.
 - **Speedometer's black area** (where the factory odometer sits): digital speed plus one info line.

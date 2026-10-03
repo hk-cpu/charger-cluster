@@ -1,7 +1,7 @@
 // Keeps the dashboard working with no internet (for example while the phone
 // is joined to a Wi-Fi OBD adapter). Shows the saved copy first, then
 // quietly downloads any update for next time.
-const CACHE = 'charger-cluster-v4';
+const CACHE = 'charger-cluster-v5';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {

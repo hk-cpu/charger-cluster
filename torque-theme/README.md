@@ -32,7 +32,7 @@ gauge → **Edit**. Left to right, like the real cluster:
 | Position | Sensor | Min | Max | Size |
 |---|---|---|---|---|
 | 1 | Fuel Level (from engine ECU) | 0 | 100 % | small |
-| 2 | Speed (OBD) | 0 | 240 km/h | large |
+| 2 | Speed (OBD) | 0 | 260 km/h | large |
 | 3 | Engine RPM | 0 | 7000 | large |
 | 4 | Engine Coolant Temperature | 40 | 130 °C | small |
 

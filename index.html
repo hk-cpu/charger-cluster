@@ -47,7 +47,7 @@
   /* SVG gauge parts: black markings on a satin-silver face, like the factory cluster */
   .num   { fill: var(--mark); font-weight: 700; text-anchor: middle; dominant-baseline: central; font-size: 15px; }
   .num.s { font-size: 14px; }
-  .num.m { font-size: 11px; }
+  .num.m { font-size: 10px; letter-spacing: -.02em; }
   .subn  { fill: #4a4e52; font-weight: 600; text-anchor: middle; dominant-baseline: central; font-size: 7px; }
   .lbl   { fill: var(--mark); text-anchor: middle; font-weight: 700; font-size: 11px; }
   .lbl2  { fill: #33373b; text-anchor: middle; font-weight: 600; font-size: 7px; letter-spacing: .04em; }
@@ -360,9 +360,9 @@
   const speed = new Gauge($('g-speed'), speedOpts());
   function speedOpts() {
     return units === 'mph'
-      ? { max: 150, major: 20, mid: 10, minor: 5, label: v => v, numClass: 'm', numR: 62,
+      ? { max: 160, major: 20, mid: 10, minor: 5, label: v => v, numClass: 'm', numR: 62,
           units: [['MPH', 'lbl'], ['km/h', 'lbl2']], sub: { step: 40, factor: 0.621371 } }
-      : { max: 240, major: 20, mid: 10, minor: 5, label: v => v, numClass: 'm', numR: 62,
+      : { max: 260, major: 20, mid: 10, minor: 5, label: v => v, numClass: 'm', numR: 62,
           units: [['km/h', 'lbl'], ['MPH', 'lbl2']], sub: { step: 20, factor: 1.609344 } };
   }
   const fuel = new Gauge($('g-fuel'), {
