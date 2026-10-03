@@ -64,6 +64,35 @@ It shows every message between the phone and the adapter.
 | `BRIDGE APP NOT RUNNING` | Wi-Fi only: start the `websockify` command in Termux. |
 | Fuel shows `NO DATA` | Some 2006 cars don't report fuel level over OBD. That's normal, not a fault. |
 
+## Coolant-only mode (phone behind the bezel)
+
+For a phone mounted behind the cluster lens, taped off black, with only the round temperature
+gauge showing through the bezel hole.
+
+1. **MENU → Layout: Coolant only**. The screen goes black except for one factory-style temperature gauge
+   (silver face, C / H, red mark at H, black lower half, no chrome ring, because the car's bezel is the ring).
+2. Mount the phone behind the cluster, then **MENU → Line up the gauge…**:
+   drag the gauge until it sits exactly in the hole, set the size with the slider, use **Rotate** if the
+   phone is mounted sideways or upside down, then tap **Done**. It remembers the position.
+3. Tape off the rest. The A34 has an AMOLED screen, so black areas are fully off and won't glow through.
+4. With the MENU button under tape, **press and hold anywhere on the screen for 1.5 seconds** to open the menu.
+
+Options in the menu:
+- **Temp needle: Factory / Exact**. *Factory* (default) works like the real gauge: the needle stays in the
+  middle across the whole normal range (about 80–108 °C) and only climbs toward H when the engine really
+  runs hot. *Exact* shows the true temperature.
+- **Number under needle**: shows the temperature in digits in the black lower half (off by default).
+  Connection messages also appear there until the adapter is connected.
+- The gauge shifts by 1–2 pixels every minute. You can't see it behind the bezel, but it stops a still image
+  burning into the screen.
+
+**With the Wi-Fi Kingbolen**, the web page needs the Termux bridge (see "C. Wi-Fi" above). The alternative is
+Torque Pro with the theme: one large *Engine Coolant Temperature* dial, though lining it up exactly with the
+hole is harder there.
+
+**Heat:** a phone sealed behind the cluster can get very hot, especially while charging in the sun. Use a
+charger that isn't a fast charger, and check the phone after the first few drives.
+
 ## Other settings (MENU)
 
 - **Units**: km/h / °C or mph / °F (the speedometer face redraws to match).

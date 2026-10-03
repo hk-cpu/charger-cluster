@@ -106,6 +106,29 @@
   .panel button.wide { grid-column: span 2; text-align: center; }
   pre.log { background: #000; color: #9fd3ff; font: 11px/1.35 ui-monospace, monospace; padding: 8px; height: 55vh; overflow: auto; white-space: pre-wrap; word-break: break-all; border-radius: 8px; margin: 0 0 8px; user-select: text; -webkit-user-select: text; }
 
+  /* Coolant-only mode: one factory temp gauge on black, lined up behind the real bezel hole */
+  .solo { position: fixed; inset: 0; background: #000; display: none; z-index: 3; touch-action: none; }
+  body.solo-mode .solo { display: block; }
+  body.solo-mode .app { display: none; }
+  body.solo-mode .rotate { display: none !important; }
+  body.solo-mode .menu-btn { color: #1c2024; border-color: #0e1113; }
+  .solo-g { position: absolute; transform: translate(-50%, -50%); }
+  .solo-g > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .solo-info { position: absolute; left: 25%; right: 25%; top: 64%; height: 22%; display: flex; flex-direction: column;
+               align-items: center; justify-content: center; text-align: center; font-family: "Roboto Mono", ui-monospace, monospace;
+               color: var(--evic); text-shadow: 0 0 4px rgba(120,200,255,.45); }
+  .solo-info .v { font-size: 1em; font-weight: 700; }
+  .solo-info .m { font-size: .42em; line-height: 1.25; }
+  .solo-info .m.err { color: #ffb4a8; }
+  .solo.adjust .solo-g { outline: 2px dashed #3f8cff; outline-offset: 2px; border-radius: 50%; }
+  .adjbar { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: none;
+            background: #0c1014; border: 1px solid #262d35; border-radius: 12px; padding: 10px 12px; z-index: 6;
+            width: min(520px, calc(100vw - 32px)); color: var(--ink); font: 13px Roboto, sans-serif; }
+  .solo.adjust ~ .adjbar { display: block; }
+  .adjbar p { margin: 0 0 8px; color: var(--sub); }
+  .adjbar .row { display: flex; gap: 8px; align-items: center; }
+  .adjbar input[type=range] { flex: 1; }
+  .adjbar button { background: #121820; color: var(--ink); border: 1px solid #252d36; border-radius: 8px; padding: 8px 12px; font: inherit; }
   .rotate { position: fixed; inset: 0; background: #000; display: none; align-items: center; justify-content: center; text-align: center; color: var(--sub); font-size: 16px; padding: 24px; z-index: 20; }
   @media (orientation: portrait) and (max-width: 700px) { .rotate { display: flex; } }
 </style>
@@ -180,6 +203,10 @@
       <button id="b-dim">Brightness: Day</button>
       <button id="b-full">Full screen</button>
       <button id="b-log">Connection log</button>
+      <button id="b-layout">Layout: Full cluster<small>Or one coolant gauge, to sit behind the real bezel</small></button>
+      <button id="b-fac">Temp needle: Factory<small>Factory = stays centred while temperature is normal</small></button>
+      <button id="b-adjust">Line up the gauge…<small>Coolant-only mode: drag and resize</small></button>
+      <button id="b-solonum">Number under needle: Off</button>
       <button id="b-close" class="wide">Close</button>
     </div>
   </div>
@@ -193,6 +220,20 @@
       <button id="b-copy">Copy log</button>
       <button id="b-logclose">Close</button>
     </div>
+  </div>
+</div>
+
+<div class="solo" id="solo">
+  <div class="solo-g" id="solo-g">
+    <svg id="g-solo" viewBox="0 0 200 200"></svg>
+    <div class="solo-info"><span class="v" id="solo-v"></span><span class="m" id="solo-m"></span></div>
+  </div>
+</div>
+<div class="adjbar">
+  <p>Drag the gauge so it sits exactly in the bezel hole. Use the slider for size.</p>
+  <div class="row">
+    <span>Size</span><input type="range" id="adj-size" min="15" max="100" step="0.5">
+    <button id="adj-rot">Rotate</button><button id="adj-reset">Reset</button><button id="adj-done">Done</button>
   </div>
 </div>
 
@@ -260,8 +301,10 @@
                             numR: 60, numClass: '', chord: 137, units: [] }, o);
       const s = this.svg; s.innerHTML = '';
       // Chrome trim ring, silver face, and the black lower area where the factory LCDs sit
-      el('circle', { cx: 100, cy: 100, r: 98, fill: 'url(#chrome)' }, s);
-      el('circle', { cx: 100, cy: 100, r: 92.5, fill: '#060708' }, s);
+      if (this.ring !== false) {
+        el('circle', { cx: 100, cy: 100, r: 98, fill: 'url(#chrome)' }, s);
+        el('circle', { cx: 100, cy: 100, r: 92.5, fill: '#060708' }, s);
+      }
       el('circle', { cx: 100, cy: 100, r: 91, fill: 'url(#face)' }, s);
       const h = Math.sqrt(91 * 91 - (this.chord - 100) ** 2);
       el('path', { d: `M${100 - h} ${this.chord}A91 91 0 ${this.chord < 100 ? 1 : 0} 0 ${100 + h} ${this.chord}Z`, fill: '#050506' }, s);
@@ -330,11 +373,32 @@
     min: 40, max: 130, major: 45, minor: 22.5, a0: -50, a1: 50, red: [121, 130], small: true, chord: 112,
     label: v => v === 40 ? 'C' : v === 130 ? 'H' : '', icon: ICON_TEMP
   });
+  // Coolant-only gauge: same as the factory temp gauge. No chrome ring (the car's own bezel frames it) and no icon.
+  const solo = new Gauge($('g-solo'), {
+    min: 40, max: 130, major: 45, minor: 22.5, a0: -50, a1: 50, red: [121, 130], small: true, chord: 112,
+    ring: false, label: v => v === 40 ? 'C' : v === 130 ? 'H' : ''
+  });
+
+  // Factory temp gauges are "buffered": the needle sits in the middle across the whole normal range and only
+  // moves toward H when the engine really runs hot. 'Exact' shows the true value instead.
+  let factoryTemp = store.get('factoryTemp', true);
+  const FAC = [[40, 40], [80, 85], [108, 85], [125, 130]];
+  function tempNeedle(c) {
+    if (c === null || !factoryTemp) return c;
+    if (c <= FAC[0][0]) return FAC[0][1];
+    for (let i = 1; i < FAC.length; i++) {
+      const [x0, y0] = FAC[i - 1], [x1, y1] = FAC[i];
+      if (c <= x1) return y0 + (c - x0) * (y1 - y0) / (x1 - x0);
+    }
+    return 130;
+  }
+
   const gauges = [
     { g: tach,  read: () => S.rpm },
     { g: speed, read: () => S.speed === null ? null : (units === 'mph' ? S.speed * 0.621371 : S.speed) },
     { g: fuel,  read: () => S.fuel },
-    { g: temp,  read: () => S.coolant },
+    { g: temp,  read: () => tempNeedle(S.coolant) },
+    { g: solo,  read: () => tempNeedle(S.coolant) },
   ];
 
   // ---------- Telltales ----------
@@ -719,7 +783,7 @@
   $('b-full').onclick = async () => {
     closeMenu();
     try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch {}
-    try { await screen.orientation.lock('landscape'); } catch {}
+    if (layout !== 'temp') { try { await screen.orientation.lock('landscape'); } catch {} }
     keepAwake();
   };
 
@@ -730,6 +794,83 @@
     catch { $('b-copy').textContent = 'Copy failed – screenshot instead'; }
     setTimeout(() => { $('b-copy').textContent = 'Copy log'; }, 2000);
   };
+
+  // ---------- Coolant-only mode ----------
+  let layout = store.get('layout', 'full');          // 'full' | 'temp'
+  let soloNum = store.get('soloNum', false);
+  const SOLO_DEFAULT = { x: .5, y: .5, size: 60, rot: 0 };  // centre as a fraction of the screen, size in % of the short side
+  let soloPos = Object.assign({}, SOLO_DEFAULT, store.get('soloPos', {}));
+  let shift = [0, 0];                                  // tiny drift so a static image doesn't burn into the AMOLED screen
+
+  function placeSolo() {
+    const g = $('solo-g'), short = Math.min(innerWidth, innerHeight), d = short * soloPos.size / 100;
+    g.style.width = g.style.height = d + 'px';
+    g.style.left = (soloPos.x * innerWidth + shift[0]) + 'px';
+    g.style.top = (soloPos.y * innerHeight + shift[1]) + 'px';
+    g.style.fontSize = (d * .13) + 'px';
+    g.style.transform = `translate(-50%, -50%) rotate(${soloPos.rot || 0}deg)`;
+    $('adj-size').value = soloPos.size;
+  }
+  function showLayout() {
+    document.body.classList.toggle('solo-mode', layout === 'temp');
+    $('b-layout').firstChild.textContent = 'Layout: ' + (layout === 'temp' ? 'Coolant only' : 'Full cluster');
+    $('b-fac').firstChild.textContent = 'Temp needle: ' + (factoryTemp ? 'Factory' : 'Exact');
+    $('b-solonum').textContent = 'Number under needle: ' + (soloNum ? 'On' : 'Off');
+    $('b-adjust').disabled = layout !== 'temp';
+    placeSolo();
+  }
+  $('b-layout').onclick = () => { layout = layout === 'temp' ? 'full' : 'temp'; store.set('layout', layout); showLayout(); };
+  $('b-fac').onclick = () => { factoryTemp = !factoryTemp; store.set('factoryTemp', factoryTemp); showLayout(); };
+  $('b-solonum').onclick = () => { soloNum = !soloNum; store.set('soloNum', soloNum); showLayout(); };
+  $('b-adjust').onclick = () => { closeMenu(); shift = [0, 0]; placeSolo(); $('solo').classList.add('adjust'); };
+  $('adj-done').onclick = () => { $('solo').classList.remove('adjust'); store.set('soloPos', soloPos); };
+  $('adj-reset').onclick = () => { soloPos = Object.assign({}, SOLO_DEFAULT); placeSolo(); };
+  $('adj-rot').onclick = () => { soloPos.rot = ((soloPos.rot || 0) + 90) % 360; placeSolo(); };
+  $('adj-size').oninput = e => { soloPos.size = +e.target.value; placeSolo(); };
+  addEventListener('resize', placeSolo);
+
+  // Drag to move while lining up
+  let drag = null;
+  $('solo').addEventListener('pointerdown', e => {
+    if (!$('solo').classList.contains('adjust')) return;
+    drag = { x: e.clientX, y: e.clientY, px: soloPos.x, py: soloPos.y };
+    $('solo').setPointerCapture(e.pointerId);
+  });
+  $('solo').addEventListener('pointermove', e => {
+    if (!drag) return;
+    soloPos.x = Math.min(1, Math.max(0, drag.px + (e.clientX - drag.x) / innerWidth));
+    soloPos.y = Math.min(1, Math.max(0, drag.py + (e.clientY - drag.y) / innerHeight));
+    placeSolo();
+  });
+  $('solo').addEventListener('pointerup', () => { drag = null; });
+
+  // Long-press anywhere (1.5 s) opens the menu, for when the MENU button is hidden under tape
+  let lp = null;
+  addEventListener('pointerdown', e => {
+    if (e.target.closest('.sheet, .adjbar, .menu-btn') || $('solo').classList.contains('adjust')) return;
+    const x = e.clientX, y = e.clientY;
+    lp = { x, y, t: setTimeout(() => { lp = null; menu.classList.add('open'); }, 1500) };
+  });
+  addEventListener('pointermove', e => { if (lp && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 12) { clearTimeout(lp.t); lp = null; } });
+  addEventListener('pointerup', () => { if (lp) { clearTimeout(lp.t); lp = null; } });
+
+  // Move the gauge by up to 2 pixels every minute: invisible behind the bezel, protects the screen from burn-in
+  setInterval(() => {
+    if (layout !== 'temp' || $('solo').classList.contains('adjust')) return;
+    shift = [Math.round(Math.random() * 4 - 2), Math.round(Math.random() * 4 - 2)];
+    placeSolo();
+  }, 60000);
+
+  // Small readout in the black lower half: connection messages, and the temperature if switched on
+  setInterval(() => {
+    if (layout !== 'temp') return;
+    const ok = linkState === 'ok' && !messageErr;
+    $('solo-v').textContent = soloNum && S.coolant !== null ? tempStr(S.coolant) : '';
+    const m = $('solo-m');
+    m.textContent = ok ? '' : message;
+    m.classList.toggle('err', messageErr);
+  }, 250);
+  showLayout();
 
   // Keep the screen on while the dashboard is open.
   let wakeLock = null;
