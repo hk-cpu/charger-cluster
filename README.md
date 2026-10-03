@@ -96,6 +96,45 @@ hole is harder there.
 **Heat:** a phone sealed behind the cluster can get very hot, especially while charging in the sun. Use a
 charger that isn't a fast charger, and check the phone after the first few drives.
 
+## Make it start by itself with the car
+
+Goal: car on → phone wakes, dashboard opens and connects. Car off → phone sleeps.
+The phone stays switched on all the time; it just sleeps while the car is off.
+
+**Power first:** plug the phone's charger into a socket that is **only live with the ignition on**.
+If the socket stays live with the car off, the phone never knows the car is off, keeps the screen on,
+and drains the car battery.
+
+1. **Install the dashboard as an app.** Open the dashboard in Chrome → menu **⋮** → **Add to Home screen** →
+   **Install**. It now has its own icon, opens full screen, and shows up as **Charger Cluster** in the app list.
+2. **No screen lock**, so the phone wakes straight into the dashboard:
+   Settings → **Lock screen** → **Screen lock type** → **None**.
+3. **Stay awake while charging** (screen never turns off while the car is on):
+   Settings → **About phone** → **Software information** → tap **Build number** 7 times →
+   back to Settings → **Developer options** → turn on **Stay awake**.
+4. **Short sleep when the car is off:** Settings → **Display** → **Screen timeout** → **30 seconds**.
+5. **Open the dashboard automatically:** Settings → **Modes and Routines** → **Routines** → **+** →
+   **If:** *Charging status* → *Charging* (wired) → **Then:** *Open an app or do an app action* → **Charger Cluster** → Save.
+   Samsung phones light the screen when a charger connects, so: key on → charging starts → screen on → dashboard opens.
+6. **Join the adapter's Wi-Fi automatically:** Settings → **Connections** → **Wi-Fi** → tap the adapter's network
+   (e.g. `WiFi_OBDII`) → ⚙ → turn on **Auto reconnect**. When Android says *"no internet"*, choose to **stay connected**.
+   Then Wi-Fi → ⋮ → **Intelligent Wi-Fi** → turn **off** *Switch to mobile data*, so the phone doesn't drop the adapter.
+7. **Keep the bridge running all the time** (Wi-Fi adapter only):
+   - Install **Termux:Boot** from F-Droid and open it once.
+   - In Termux, paste this line once (it makes the bridge start whenever the phone starts):
+
+     ```
+     mkdir -p ~/.termux/boot && printf '#!/data/data/com.termux/files/usr/bin/sh\ntermux-wake-lock\nwebsockify 35001 192.168.0.10:35000\n' > ~/.termux/boot/start-bridge && chmod +x ~/.termux/boot/start-bridge
+     ```
+   - Settings → **Apps** → **Termux** → **Battery** → **Unrestricted** (same for **Termux:Boot**).
+   - Restart the phone once. The bridge now runs in the background, waiting for the adapter.
+   - If your adapter uses a different address, copy it from Torque (Settings → OBD2 Adapter Settings) and change `192.168.0.10:35000` in the line above.
+8. **Protect the phone battery** (it will be plugged in a lot, in a hot car): Settings → **Battery** →
+   **More battery settings** → **Protect battery** (stops charging at about 85 %).
+
+The dashboard remembers the adapter, the layout and the line-up, and reconnects by itself every few seconds
+until the car answers.
+
 ## Other settings (MENU)
 
 - **Units**: km/h / °C or mph / °F (the speedometer face redraws to match).
