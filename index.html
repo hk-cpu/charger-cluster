@@ -120,6 +120,9 @@
   .solo-info .v { font-size: 1em; font-weight: 700; }
   .solo-info .m { font-size: .42em; line-height: 1.25; }
   .solo-info .m.err { color: #ffb4a8; }
+  .solo-g.half .solo-info { top: 25%; height: 16%; left: 30%; right: 30%; color: #2a2d30; text-shadow: none; }
+  .solo-g.half .solo-info .v { font-size: .55em; position: absolute; left: -22%; width: 50%; top: 122%; text-align: center; }
+  .solo-g.half .solo-info .m.err { color: #b3120c; }
   .solo.adjust .solo-g { outline: 2px dashed #3f8cff; outline-offset: 2px; border-radius: 50%; }
   .adjbar { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: none;
             background: #0c1014; border: 1px solid #262d35; border-radius: 12px; padding: 10px 12px; z-index: 6;
@@ -207,6 +210,7 @@
       <button id="b-fac">Temp needle: Factory<small>Factory = stays centred while temperature is normal</small></button>
       <button id="b-adjust">Line up the gauge…<small>Coolant-only mode: drag and resize</small></button>
       <button id="b-solonum">Number under needle: Off</button>
+      <button id="b-half">Lower part: Black<small>"Cut off" = only the silver top, keeps the car's own black screen visible</small></button>
       <button id="b-close" class="wide">Close</button>
     </div>
   </div>
@@ -298,8 +302,16 @@
     constructor(svg, opt) { this.svg = svg; this.cur = 0; this.target = 0; this.build(opt); }
     build(o) {
       Object.assign(this, { min: 0, a0: -112, a1: 112, red: null, sub: null, mid: null, small: false,
-                            numR: 60, numClass: '', chord: 137, units: [] }, o);
-      const s = this.svg; s.innerHTML = '';
+                            numR: 60, numClass: '', chord: 137, units: [], half: false, ring: true }, o);
+      const svg = this.svg; svg.innerHTML = '';
+      // half: draw only the silver part above the black area, so the car's own black area/LCD can show below
+      let s = svg;
+      if (this.half) {
+        const hw = Math.sqrt(98 * 98 - (this.chord - 100) ** 2), id = 'clip-' + svg.id;
+        const cp = el('clipPath', { id }, el('defs', {}, svg));
+        el('path', { d: `M${100 - hw} ${this.chord}A98 98 0 1 1 ${100 + hw} ${this.chord}Z` }, cp);
+        s = el('g', { 'clip-path': `url(#${id})` }, svg);
+      }
       // Chrome trim ring, silver face, and the black lower area where the factory LCDs sit
       if (this.ring !== false) {
         el('circle', { cx: 100, cy: 100, r: 98, fill: 'url(#chrome)' }, s);
@@ -374,10 +386,12 @@
     label: v => v === 40 ? 'C' : v === 130 ? 'H' : '', icon: ICON_TEMP
   });
   // Coolant-only gauge: same as the factory temp gauge. No chrome ring (the car's own bezel frames it) and no icon.
-  const solo = new Gauge($('g-solo'), {
+  const SOLO_OPTS = {
     min: 40, max: 130, major: 45, minor: 22.5, a0: -50, a1: 50, red: [121, 130], small: true, chord: 112,
     ring: false, label: v => v === 40 ? 'C' : v === 130 ? 'H' : ''
-  });
+  };
+  let soloHalf = store.get('soloHalf', false);
+  const solo = new Gauge($('g-solo'), Object.assign({}, SOLO_OPTS, { half: soloHalf }));
 
   // Factory temp gauges are "buffered": the needle sits in the middle across the whole normal range and only
   // moves toward H when the engine really runs hot. 'Exact' shows the true value instead.
@@ -815,12 +829,18 @@
     document.body.classList.toggle('solo-mode', layout === 'temp');
     $('b-layout').firstChild.textContent = 'Layout: ' + (layout === 'temp' ? 'Coolant only' : 'Full cluster');
     $('b-fac').firstChild.textContent = 'Temp needle: ' + (factoryTemp ? 'Factory' : 'Exact');
-    $('b-solonum').textContent = 'Number under needle: ' + (soloNum ? 'On' : 'Off');
+    $('b-solonum').textContent = 'Number' + (soloHalf ? '' : ' under needle') + ': ' + (soloNum ? 'On' : 'Off');
+    $('b-half').firstChild.textContent = 'Lower part: ' + (soloHalf ? 'Cut off' : 'Black');
+    $('solo-g').classList.toggle('half', soloHalf);
     $('b-adjust').disabled = layout !== 'temp';
     placeSolo();
   }
   $('b-layout').onclick = () => { layout = layout === 'temp' ? 'full' : 'temp'; store.set('layout', layout); showLayout(); };
   $('b-fac').onclick = () => { factoryTemp = !factoryTemp; store.set('factoryTemp', factoryTemp); showLayout(); };
+  $('b-half').onclick = () => {
+    soloHalf = !soloHalf; store.set('soloHalf', soloHalf);
+    solo.build(Object.assign({}, SOLO_OPTS, { half: soloHalf })); showLayout();
+  };
   $('b-solonum').onclick = () => { soloNum = !soloNum; store.set('soloNum', soloNum); showLayout(); };
   $('b-adjust').onclick = () => { closeMenu(); shift = [0, 0]; placeSolo(); $('solo').classList.add('adjust'); };
   $('adj-done').onclick = () => { $('solo').classList.remove('adjust'); store.set('soloPos', soloPos); };

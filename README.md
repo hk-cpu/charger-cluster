@@ -81,6 +81,9 @@ Options in the menu:
 - **Temp needle: Factory / Exact**. *Factory* (default) works like the real gauge: the needle stays in the
   middle across the whole normal range (about 80–108 °C) and only climbs toward H when the engine really
   runs hot. *Exact* shows the true temperature.
+- **Lower part: Black / Cut off**. *Cut off* draws only the silver top of the gauge (C, H, needle) and leaves
+  everything below it black, so the car's own working black screen in the cluster stays in use.
+  Line up the flat bottom edge with the top of the car's black area.
 - **Number under needle**: shows the temperature in digits in the black lower half (off by default).
   Connection messages also appear there until the adapter is connected.
 - The gauge shifts by 1–2 pixels every minute. You can't see it behind the bezel, but it stops a still image
