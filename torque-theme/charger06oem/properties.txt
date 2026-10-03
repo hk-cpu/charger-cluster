@@ -1,0 +1,27 @@
+# Charger 06 OEM: theme for Torque Pro
+name=Charger 06 OEM
+description=Factory 2006 Charger look: silver faces, black markings, red needles, chrome rings
+author=charger-cluster
+
+# Sweep like the factory gauges (degrees each side of the bottom of the dial)
+globalDialStartAngle=68
+globalDialStopAngle=68
+# Fuel and coolant: small arcs across the top, like the factory side gauges
+dialStartAngle_05=130
+dialStopAngle_05=130
+dialStartAngle_2f=130
+dialStopAngle_2f=130
+
+displayTickColour=#141516
+displayTextTitleColour=#3a3d40
+displayTextValueColour=#141516
+displayIndicatorColour=#e3211b
+dialNeedleColour=#e3211b
+graphLineColour=#e3211b
+updateFlasherColour=#2bff6a
+showUpdateFlasher=false
+
+font=sans-serif-condensed
+globalFontScale=1
+dialTickStyle=1
+backgroundScrolls=false

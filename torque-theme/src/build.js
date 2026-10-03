@@ -1,11 +1,12 @@
 // Renders the Torque Pro theme images from SVG and zips them.
-// Run: node build.js  (needs playwright + chromium; output in ../dist)
+// Run: node build.js  (needs playwright + chromium)
+// Writes one folder per theme next to src/, and ready-to-import zips in ../dist
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 
-const OUT = path.join(__dirname, '..', 'theme');
+const THEMES = path.join(__dirname, '..');
 const DIST = path.join(__dirname, '..', 'dist');
 
 // Geometry shared with the web dashboard: angles measured from 12 o'clock.
@@ -28,6 +29,10 @@ const DEFS = `
   <radialGradient id="face" cx=".5" cy=".4" r=".62">
     <stop offset="0" stop-color="#1c2025"/><stop offset=".7" stop-color="#0b0d10"/><stop offset="1" stop-color="#020203"/>
   </radialGradient>
+  <radialGradient id="silver" cx=".46" cy=".38" r=".7">
+    <stop offset="0" stop-color="#f7f8f6"/><stop offset=".55" stop-color="#e3e5e2"/>
+    <stop offset=".9" stop-color="#c8cbc9"/><stop offset="1" stop-color="#aeb2b1"/>
+  </radialGradient>
   <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0" stop-color="#fff" stop-opacity=".07"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/>
   </linearGradient>
@@ -37,20 +42,20 @@ const DEFS = `
 </defs>`;
 
 // Chrome bezel + dark face, as on the factory cluster. Torque draws ticks, numbers and needle on top.
-function dial(extra = '') {
+function dial(extra = '', silver = false) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">${DEFS}
     <circle cx="240" cy="240" r="238" fill="url(#chrome)"/>
     <circle cx="240" cy="240" r="226" fill="url(#chromeIn)"/>
     <circle cx="240" cy="240" r="221" fill="#020203"/>
-    <circle cx="240" cy="240" r="218" fill="url(#face)"/>
-    <circle cx="240" cy="240" r="207" fill="none" stroke="#252a30" stroke-width="2"/>
+    <circle cx="240" cy="240" r="218" fill="url(#${silver ? 'silver' : 'face'})"/>
+    <circle cx="240" cy="240" r="207" fill="none" stroke="${silver ? '#9a9ea0' : '#252a30'}" stroke-width="2"/>
     ${extra}
     <path d="M240 22a218 218 0 0 1 218 218H22A218 218 0 0 1 240 22z" fill="url(#glass)"/>
   </svg>`;
 }
-const redArc = (from, to, r = 204) =>
-  `<path d="${arc(r, from, to)}" fill="none" stroke="#ff2a1f" stroke-width="7" stroke-linecap="butt" opacity=".95"/>`;
-const icon = (d, y) => `<g transform="translate(216 ${y}) scale(2)" fill="#7d8792">${d}</g>`;
+const redArc = (from, to, r = 200, w = 14) =>
+  `<path d="${arc(r, from, to)}" fill="none" stroke="#d81e17" stroke-width="${w}" stroke-linecap="butt"/>`;
+const icon = (d, y, fill = '#7d8792') => `<g transform="translate(216 ${y}) scale(2)" fill="${fill}">${d}</g>`;
 const ICON_FUEL = '<path d="M2 2h9v19H2zm2 2v5h5V4zm8 3 1-1 3.5 3.5V18a1 1 0 0 0 2 0v-6.5L17 10V7h1.5l1.5 1.5V18a3 3 0 0 1-6 0V12h-1z"/>';
 const ICON_TEMP = '<path d="M10 1h3v12.5a4.2 4.2 0 1 1-3 0zm5 2h5v1.6h-5zm0 3.5h5v1.6h-5zm0 3.5h5v1.6h-5z"/>';
 
@@ -82,54 +87,73 @@ function background() {
   </svg>`;
 }
 
-function thumb() {
+function thumb(silver) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 480 480">${DEFS}
     <rect width="480" height="480" rx="60" fill="#050607"/>
     <g transform="translate(24 24) scale(.9)">
-      <circle cx="240" cy="240" r="238" fill="url(#chrome)"/><circle cx="240" cy="240" r="218" fill="url(#face)"/>
-      ${redArc(70, 125, 200)}
-      <polygon points="232,262 248,262 243,70 240,58 237,70" fill="#ff4a1c" transform="rotate(-40 240 240)"/>
-      <circle cx="240" cy="240" r="26" fill="url(#cap)"/><circle cx="240" cy="240" r="15" fill="#0e1013"/>
+      <circle cx="240" cy="240" r="238" fill="url(#chrome)"/><circle cx="240" cy="240" r="218" fill="url(#${silver ? 'silver' : 'face'})"/>
+      <polygon points="232,262 248,262 243,70 240,58 237,70" fill="${silver ? '#e3211b' : '#ff4a1c'}" transform="rotate(-40 240 240)"/>
+      <circle cx="240" cy="240" r="26" fill="url(#cap)"/>
     </g>
   </svg>`;
 }
 
-// Big dials sweep 250° (start/stop 55° either side of the bottom); small ones 120° across the top.
-// Red zones assume the dial ranges set in Torque: RPM 0–7000 (red from 6000), coolant 40–130 °C (red from 115).
-const BIG = 125, SMALL = 60;
+// Sweep angles measured from the factory cluster: big dials about 224° (0 and max 68° either side of
+// the bottom), fuel and coolant about 100° across the top (130° either side of the bottom).
+// Red marks assume these dial ranges in Torque: fuel 0–100 %, coolant 40–130 °C.
+const BIG = 112, SMALL = 50;
 const at = (v, min, max, half) => -half + (v - min) / (max - min) * 2 * half;
+const fuelRed = () => redArc(at(0, 0, 100, SMALL), at(8, 0, 100, SMALL));
+const tempRed = () => redArc(at(121, 40, 130, SMALL), at(130, 40, 130, SMALL));
 
-const IMAGES = {
-  'dial_background.png': dial(),
-  'dial_background_0c.png': dial(redArc(at(6000, 0, 7000, BIG), BIG)),   // RPM
-  'dial_background_0d.png': dial(),                                       // speed
-  'dial_background_05.png': dial(redArc(at(115, 40, 130, SMALL), SMALL) + icon(ICON_TEMP, 300)), // coolant
-  'dial_background_2f.png': dial(redArc(-SMALL, at(10, 0, 100, SMALL)) + icon(ICON_FUEL, 300)),  // fuel
-  'display_background.png': display(),
-  'background.jpg': background(),
+const VARIANTS = {
+  // Matches the real 2006 cluster: satin-silver faces, black markings, red needles.
+  charger06oem: {
+    name: 'Charger 06 OEM',
+    description: 'Factory 2006 Charger look: silver faces, black markings, red needles, chrome rings',
+    silver: true,
+    colours: { tick: '#141516', title: '#3a3d40', value: '#141516', needle: '#e3211b' },
+  },
+  // Same layout with dark faces, easier on the eyes at night.
+  charger06night: {
+    name: 'Charger 06 Night',
+    description: 'Charger-style chrome rings with dark faces and white markings for night driving',
+    silver: false,
+    colours: { tick: '#f4f6f8', title: '#9aa3ad', value: '#f4f6f8', needle: '#ff4a1c' },
+  },
 };
 
-const PROPS = `# Charger 06 OEM theme for Torque Pro
-name=Charger 06 OEM
-description=Factory-style chrome-ring gauges inspired by the 2006 LX cluster
+function images(v) {
+  const iconFill = v.silver ? '#5b6065' : '#7d8792';
+  return {
+    'dial_background.png': dial('', v.silver),
+    'dial_background_05.png': dial(tempRed() + icon(ICON_TEMP, 300, iconFill), v.silver),  // coolant
+    'dial_background_2f.png': dial(fuelRed() + icon(ICON_FUEL, 300, iconFill), v.silver),  // fuel
+    'display_background.png': display(),
+    'background.jpg': background(),
+  };
+}
+
+const props = v => `# ${v.name}: theme for Torque Pro
+name=${v.name}
+description=${v.description}
 author=charger-cluster
 
 # Sweep like the factory gauges (degrees each side of the bottom of the dial)
-globalDialStartAngle=55
-globalDialStopAngle=55
+globalDialStartAngle=${180 - BIG}
+globalDialStopAngle=${180 - BIG}
 # Fuel and coolant: small arcs across the top, like the factory side gauges
-dialStartAngle_05=120
-dialStopAngle_05=120
-dialStartAngle_2f=120
-dialStopAngle_2f=120
+dialStartAngle_05=${180 - SMALL}
+dialStopAngle_05=${180 - SMALL}
+dialStartAngle_2f=${180 - SMALL}
+dialStopAngle_2f=${180 - SMALL}
 
-# Colours: white markings, red-orange needle
-displayTickColour=#f4f6f8
-displayTextTitleColour=#9aa3ad
-displayTextValueColour=#f4f6f8
-displayIndicatorColour=#ff4a1c
-dialNeedleColour=#ff4a1c
-graphLineColour=#ff4a1c
+displayTickColour=${v.colours.tick}
+displayTextTitleColour=${v.colours.title}
+displayTextValueColour=${v.colours.value}
+displayIndicatorColour=${v.colours.needle}
+dialNeedleColour=${v.colours.needle}
+graphLineColour=${v.colours.needle}
 updateFlasherColour=#2bff6a
 showUpdateFlasher=false
 
@@ -140,8 +164,6 @@ backgroundScrolls=false
 `;
 
 (async () => {
-  fs.rmSync(OUT, { recursive: true, force: true });
-  fs.mkdirSync(OUT, { recursive: true });
   fs.mkdirSync(DIST, { recursive: true });
   const browser = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
   const page = await browser.newPage();
@@ -151,15 +173,20 @@ backgroundScrolls=false
     await page.screenshot({ path: file, omitBackground: !jpg, type: jpg ? 'jpeg' : 'png', quality: jpg ? 90 : undefined,
                             clip: { x: 0, y: 0, width: w, height: h } });
   };
-  for (const [name, svg] of Object.entries(IMAGES)) {
-    const [w, h] = name === 'background.jpg' ? [2400, 1080] : [480, 480];
-    await render(svg, path.join(OUT, name), w, h, name.endsWith('.jpg'));
+  for (const [id, v] of Object.entries(VARIANTS)) {
+    const out = path.join(THEMES, id);
+    fs.rmSync(out, { recursive: true, force: true });
+    fs.mkdirSync(out, { recursive: true });
+    for (const [name, svg] of Object.entries(images(v))) {
+      const [w, h] = name === 'background.jpg' ? [2400, 1080] : [480, 480];
+      await render(svg, path.join(out, name), w, h, name.endsWith('.jpg'));
+    }
+    fs.writeFileSync(path.join(out, 'properties.txt'), props(v));
+    await render(thumb(v.silver), path.join(DIST, id + '.png'), 128, 128, false);
+    const zip = path.join(DIST, id + '.zip');
+    fs.rmSync(zip, { force: true });
+    execSync(`cd "${out}" && zip -q -X "${zip}" *`);
+    console.log('built', zip);
   }
-  await render(thumb(), path.join(DIST, 'charger06oem.png'), 128, 128, false);
-  fs.writeFileSync(path.join(OUT, 'properties.txt'), PROPS);
   await browser.close();
-  const zip = path.join(DIST, 'charger06oem.zip');
-  fs.rmSync(zip, { force: true });
-  execSync(`cd "${OUT}" && zip -q -X "${zip}" *`);
-  console.log('built', zip);
 })();

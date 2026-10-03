@@ -1,18 +1,17 @@
-# Charger 06 OEM theme for Torque Pro
-name=Charger 06 OEM
-description=Factory-style chrome-ring gauges inspired by the 2006 LX cluster
+# Charger 06 Night: theme for Torque Pro
+name=Charger 06 Night
+description=Charger-style chrome rings with dark faces and white markings for night driving
 author=charger-cluster
 
 # Sweep like the factory gauges (degrees each side of the bottom of the dial)
-globalDialStartAngle=55
-globalDialStopAngle=55
+globalDialStartAngle=68
+globalDialStopAngle=68
 # Fuel and coolant: small arcs across the top, like the factory side gauges
-dialStartAngle_05=120
-dialStopAngle_05=120
-dialStartAngle_2f=120
-dialStopAngle_2f=120
+dialStartAngle_05=130
+dialStopAngle_05=130
+dialStartAngle_2f=130
+dialStopAngle_2f=130
 
-# Colours: white markings, red-orange needle
 displayTickColour=#f4f6f8
 displayTextTitleColour=#9aa3ad
 displayTextValueColour=#f4f6f8

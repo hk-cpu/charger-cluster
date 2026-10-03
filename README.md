@@ -8,13 +8,17 @@ Open it on the phone: **https://hk-cpu.github.io/charger-cluster/** (after GitHu
 
 ## What's on screen
 
-- Chrome-ringed gauges: tachometer, speedometer (km/h with an inner mph scale, or the other way round),
-  fuel and coolant temperature.
+Laid out like the real 2006 cluster, left to right: **fuel, speedometer, tachometer, coolant temp**.
+
+- Satin-silver faces with black markings, red needles and chrome rings. The speedometer is 0–240 km/h
+  with the inner MPH scale (switchable to MPH first). The tachometer is 0–7 ×1000.
 - Needle sweep and warning-light check every time it starts, like the real cluster.
-- Centre info screen: big digital speed, plus four pages (tap it to switch):
-  battery volts / throttle, coolant / fuel, engine load / intake air, RPM / number of trouble codes.
-- Warning lights: check engine (from the car), overheat (coolant 118 °C or more),
-  charging fault (low or high voltage while the engine runs).
+- **Speedometer's black area** (where the factory odometer sits): digital speed plus one info line.
+  Tap it to switch between battery volts / throttle, coolant / fuel, engine load / intake air,
+  and RPM / number of trouble codes. Connection messages also show here.
+- **Tachometer's black area**: warning lights and the clock. The warning lights are check engine
+  (from the car), overheat (coolant 118 °C or more) and charging fault (low or high voltage while
+  the engine runs).
 - Turn signals and high beam only light during the start-up check. **The car doesn't send these
   through the OBD port.** They need extra wiring later.
 
@@ -76,12 +80,13 @@ It shows every message between the phone and the adapter.
 
 ## Torque Pro theme
 
-If you use the **Torque Pro** app (it connects to the Wi-Fi adapter directly), there's a matching
-factory-style theme in [`torque-theme/`](torque-theme/README.md).
+If you use the **Torque Pro** app (it connects to the Wi-Fi adapter directly), there are matching
+themes in [`torque-theme/`](torque-theme/README.md): **Charger 06 OEM** (silver, like the factory
+cluster) and **Charger 06 Night** (dark faces).
 
 ## Files
 
 - `index.html`: the whole dashboard
 - `sw.js`: lets it open with no internet
 - `manifest.json`, `icon.svg`: home-screen app icon
-- `torque-theme/`: the Torque Pro theme (ready-made zip in `torque-theme/dist/`)
+- `torque-theme/`: the Torque Pro themes (ready-made zips in `torque-theme/dist/`)
