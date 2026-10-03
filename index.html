@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Charger Cluster</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #000;
+    --face: #0a0c0f;
+    --ink: #e8edf2;
+    --dim: #6b7580;
+    --off: #171c21;
+    --line: #1c2228;
+    --track: #20262d;
+    --needle: #ff4433;
+    --green: #22e06b;
+    --blue: #3d8bff;
+    --amber: #ffb020;
+    --red: #ff3b30;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .dim1 .lights, .dim1 .cluster { filter: brightness(.6); }
+  .dim2 .lights, .dim2 .cluster { filter: brightness(.35); }
+
+  /* Warning / indicator lights */
+  .lights {
+    display: flex; justify-content: center; align-items: center;
+    gap: clamp(10px, 3vw, 30px); height: 14vh; min-height: 44px;
+  }
+  .light { width: clamp(26px, 8vh, 50px); height: clamp(26px, 8vh, 50px); color: var(--off); }
+  .light svg { width: 100%; height: 100%; fill: currentColor; }
+  .light.on.green { color: var(--green); filter: drop-shadow(0 0 6px var(--green)); }
+  .light.on.blue  { color: var(--blue);  filter: drop-shadow(0 0 6px var(--blue)); }
+  .light.on.amber { color: var(--amber); filter: drop-shadow(0 0 6px var(--amber)); }
+  .light.on.red   { color: var(--red);   filter: drop-shadow(0 0 6px var(--red)); }
+  .clock {
+    min-width: 4.5em; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums;
+    font-size: clamp(14px, 4.5vh, 26px); font-weight: 600; color: var(--dim);
+  }
+
+  /* Gauges */
+  .cluster {
+    flex: 1; min-height: 0; padding: 0 8px;
+    display: grid; grid-template-columns: 1fr minmax(130px, 22vw) 1fr;
+    align-items: center; justify-items: center;
+  }
+  .gauge { width: 100%; height: 100%; min-height: 0; }
+  .g-face   { fill: var(--face); stroke: var(--line); stroke-width: 2; }
+  .g-track  { fill: none; stroke: var(--track); stroke-width: 4; }
+  .g-red    { fill: none; stroke: var(--red); stroke-width: 4; }
+  .g-maj    { stroke: var(--ink); stroke-width: 2.2; }
+  .g-min    { stroke: var(--dim); stroke-width: 1.2; }
+  .g-lbl    { fill: var(--ink); font-size: 11px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+  .g-unit   { fill: var(--dim); font-size: 8px; letter-spacing: .12em; text-anchor: middle; }
+  .g-val    { fill: var(--ink); font-size: 22px; font-weight: 700; text-anchor: middle; font-variant-numeric: tabular-nums; }
+  .g-needle { fill: var(--needle); }
+  .g-hub    { fill: #1d2227; stroke: #3a424b; stroke-width: 1.5; }
+
+  /* Centre info column */
+  .info { display: flex; flex-direction: column; gap: 2vh; width: 100%; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: .6vh; }
+  .row .k { font-size: clamp(10px, 2.4vh, 13px); color: var(--dim); letter-spacing: .12em; }
+  .row .v { font-size: clamp(16px, 5.4vh, 30px); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row .v small { font-size: .5em; color: var(--dim); margin-left: 2px; }
+
+  /* Bottom bar */
+  .bottom {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    height: 12vh; min-height: 42px; padding: 0 12px;
+  }
+  .status { font-size: 13px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); margin-right: 6px; vertical-align: middle; }
+  .status.ok .dot { background: var(--green); }
+  .status.warn .dot { background: var(--amber); }
+  .status.err .dot { background: var(--red); }
+  .btns { display: flex; gap: 6px; flex-shrink: 0; }
+  button {
+    background: #10151a; color: var(--ink); border: 1px solid #232a32; border-radius: 10px;
+    padding: 8px 12px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  button:active { background: #1a2129; }
+  button:disabled { opacity: .4; }
+
+  /* Connect sheet */
+  .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .sheet.open { display: flex; }
+  .panel { background: #0c1014; border: 1px solid #232a32; border-radius: 16px; padding: 16px; width: min(440px, calc(100vw - 32px)); max-height: 92vh; overflow: auto; }
+  .panel h2 { margin: 0 0 4px; font-size: 17px; }
+  .panel p { margin: 0 0 8px; font-size: 13px; color: var(--dim); }
+  .panel button { display: block; width: 100%; text-align: left; margin: 8px 0; padding: 12px; }
+  .panel button small { display: block; color: var(--dim); margin-top: 3px; font-size: 12px; }
+
+  @media (orientation: portrait) {
+    .cluster { grid-template-columns: 1fr; grid-template-rows: 1fr auto 1fr; padding: 8px 16px; }
+    .info { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; padding: 8px 0; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <div class="lights">
+    <div class="light green" id="L-left" title="Left turn">
+      <svg viewBox="0 0 24 24"><path d="M1 12 10 3v5.5h13v7H10V21z"/></svg>
+    </div>
+    <div class="light blue" id="L-high" title="High beam">
+      <svg viewBox="0 0 24 24"><path d="M13 4c5 0 9 3.6 9 8s-4 8-9 8z"/><path d="M1 6.5h9v2H1zm0 4.5h9v2H1zm0 4.5h9v2H1z"/></svg>
+    </div>
+    <div class="light amber" id="L-mil" title="Check engine">
+      <svg viewBox="0 0 24 24"><path d="M7 5h7v2h-2v2h3l2 2h2V9h2v8h-2v-2h-2l-2 3H8l-2-2H4v2H2V9h2v2h2V9h4V7H7z"/></svg>
+    </div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="light red" id="L-batt" title="Battery / charging">
+      <svg viewBox="0 0 24 24"><path d="M5 5h3v2h8V5h3v2h3v13H2V7h3zm-1 4v9h16V9zm1.5 3.5h5v1.6h-5zm8 0h2v-2h1.6v2h2v1.6h-2v2h-1.6v-2h-2z"/></svg>
+    </div>
+    <div class="light red" id="L-temp" title="Engine temperature">
+      <svg viewBox="0 0 24 24"><path d="M11 2h2.6v11.3a4 4 0 1 1-2.6 0zm4 2h5v1.6h-5zm0 3.5h5v1.6h-5zm0 3.5h5v1.6h-5zM2 20c2 0 2-1.4 4-1.4 1.4 0 1.7.7 2.6 1.1-.2.7-.4 1.2-.5 1.7-1-.4-1.4-1.2-2.1-1.2-1.2 0-1.2 1.4-4 1.4zm20 0c-2 0-2-1.4-4-1.4-1.4 0-1.7.7-2.6 1.1.2.7.4 1.2.5 1.7 1-.4 1.4-1.2 2.1-1.2 1.2 0 1.2 1.4 4 1.4z"/></svg>
+    </div>
+    <div class="light green" id="L-right" title="Right turn">
+      <svg viewBox="0 0 24 24"><path d="M23 12 14 3v5.5H1v7h13V21z"/></svg>
+    </div>
+  </div>
+
+  <div class="cluster">
+    <svg class="gauge" id="tach" viewBox="0 0 200 200" aria-label="Tachometer"></svg>
+    <div class="info">
+      <div class="row"><span class="k">COOLANT</span><span class="v" id="v-coolant">--</span></div>
+      <div class="row"><span class="k">FUEL</span><span class="v" id="v-fuel">--</span></div>
+      <div class="row"><span class="k">BATTERY</span><span class="v" id="v-volt">--</span></div>
+      <div class="row"><span class="k">THROTTLE</span><span class="v" id="v-throttle">--</span></div>
+    </div>
+    <svg class="gauge" id="speedo" viewBox="0 0 200 200" aria-label="Speedometer"></svg>
+  </div>
+
+  <div class="bottom">
+    <div class="status" id="status"><span class="dot"></span><span id="status-text">Starting…</span></div>
+    <div class="btns">
+      <button id="b-connect">Connect</button>
+      <button id="b-units">km/h</button>
+      <button id="b-dim">Bright</button>
+      <button id="b-full">Full screen</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="panel">
+    <h2>Data source</h2>
+    <p>Pick where the dashboard gets its numbers.</p>
+    <button data-mode="demo">Demo<small>Fake drive to test the screen. No car needed.</small></button>
+    <button data-mode="gps">GPS speed only<small>Uses the phone's location. Speed only, no wiring.</small></button>
+    <button data-mode="ble" id="m-ble">OBD adapter – Bluetooth LE<small id="m-ble-note">For BLE (Bluetooth 4.0) ELM327 adapters.</small></button>
+    <button data-mode="serial" id="m-serial">OBD adapter – Classic Bluetooth<small id="m-serial-note">For older ELM327 adapters paired in Android Bluetooth settings.</small></button>
+    <button data-mode="close">Cancel</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Settings (remembered on this phone only) ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+  let units = store.get('units', 'kmh');   // 'kmh' | 'mph'
+  let dim = store.get('dim', 0);           // 0 | 1 | 2
+
+  // ---------- Live values (metric; null = unknown) ----------
+  const S = { speed: null, rpm: null, coolant: null, fuel: null, volt: null, throttle: null,
+              mil: false, left: false, right: false, high: false };
+
+  // ---------- Gauge drawing ----------
+  const NS = 'http://www.w3.org/2000/svg';
+  const A0 = -135, A1 = 135;
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const pt = (r, deg) => { const a = (deg - 90) * Math.PI / 180; return [100 + r * Math.cos(a), 100 + r * Math.sin(a)]; };
+  const arc = (r, d0, d1) => {
+    const [x0, y0] = pt(r, d0), [x1, y1] = pt(r, d1);
+    return `M${x0} ${y0}A${r} ${r} 0 ${d1 - d0 > 180 ? 1 : 0} 1 ${x1} ${y1}`;
+  };
+
+  class Gauge {
+    constructor(svg, opt) { this.svg = svg; this.cur = 0; this.target = 0; this.build(opt); }
+    build({ max, major, minor, div = 1, red = null, unit }) {
+      this.max = max;
+      this.svg.innerHTML = '';
+      el('circle', { cx: 100, cy: 100, r: 97, class: 'g-face' }, this.svg);
+      el('path', { d: arc(88, A0, A1), class: 'g-track' }, this.svg);
+      if (red !== null) el('path', { d: arc(88, this.ang(red), A1), class: 'g-red' }, this.svg);
+      for (let i = 0; i * minor <= max + 1e-9; i++) {
+        const v = i * minor, isMaj = (v % major) < 1e-6, a = this.ang(v);
+        const [x0, y0] = pt(isMaj ? 76 : 81, a), [x1, y1] = pt(88, a);
+        el('line', { x1: x0, y1: y0, x2: x1, y2: y1, class: isMaj ? 'g-maj' : 'g-min' }, this.svg);
+        if (isMaj) {
+          const [tx, ty] = pt(64, a);
+          el('text', { x: tx, y: ty, class: 'g-lbl' }, this.svg).textContent = Math.round(v / div);
+        }
+      }
+      el('text', { x: 100, y: 64, class: 'g-unit' }, this.svg).textContent = unit;
+      this.valEl = el('text', { x: 100, y: 140, class: 'g-val' }, this.svg);
+      this.needle = el('g', {}, this.svg);
+      el('polygon', { points: '96.8,106 103.2,106 100.8,20 99.2,20', class: 'g-needle' }, this.needle);
+      el('circle', { cx: 100, cy: 100, r: 8, class: 'g-hub' }, this.svg);
+      this.draw();
+    }
+    ang(v) { return A0 + (Math.min(Math.max(v, 0), this.max) / this.max) * (A1 - A0); }
+    tick() { this.cur += (this.target - this.cur) * 0.2; this.draw(); }
+    draw() { this.needle.setAttribute('transform', `rotate(${this.ang(this.cur)} 100 100)`); }
+  }
+
+  const tach = new Gauge(document.getElementById('tach'),
+    { max: 7000, major: 1000, minor: 500, div: 1000, red: 6000, unit: '× 1000 RPM' });
+  const speedo = new Gauge(document.getElementById('speedo'), speedoOpts());
+  function speedoOpts() {
+    return units === 'mph'
+      ? { max: 160, major: 20, minor: 10, unit: 'MPH' }
+      : { max: 240, major: 20, minor: 10, unit: 'KM/H' };
+  }
+
+  // ---------- Rendering ----------
+  const $ = id => document.getElementById(id);
+  const lights = { left: $('L-left'), right: $('L-right'), high: $('L-high'), mil: $('L-mil'), batt: $('L-batt'), temp: $('L-temp') };
+  const fmt = (v, d = 0) => v === null || v === undefined || isNaN(v) ? '--' : v.toFixed(d);
+
+  function render() {
+    const mph = units === 'mph';
+    const spd = S.speed === null ? null : (mph ? S.speed * 0.621371 : S.speed);
+    speedo.target = spd || 0;
+    tach.target = S.rpm || 0;
+    speedo.tick(); tach.tick();
+    speedo.valEl.textContent = fmt(spd);
+    tach.valEl.textContent = S.rpm === null ? '--' : String(Math.round(S.rpm / 50) * 50);
+
+    const cool = S.coolant === null ? null : (mph ? S.coolant * 9 / 5 + 32 : S.coolant);
+    $('v-coolant').innerHTML = cool === null ? '--' : `${fmt(cool)}<small>°${mph ? 'F' : 'C'}</small>`;
+    $('v-fuel').innerHTML = S.fuel === null ? '--' : `${fmt(S.fuel)}<small>%</small>`;
+    $('v-volt').innerHTML = S.volt === null ? '--' : `${fmt(S.volt, 1)}<small>V</small>`;
+    $('v-throttle').innerHTML = S.throttle === null ? '--' : `${fmt(S.throttle)}<small>%</small>`;
+
+    // Turn signals blink on screen while the signal is "on".
+    const blink = (Date.now() % 700) < 350;
+    lights.left.classList.toggle('on', S.left && blink);
+    lights.right.classList.toggle('on', S.right && blink);
+    lights.high.classList.toggle('on', S.high);
+    lights.mil.classList.toggle('on', S.mil);
+    lights.temp.classList.toggle('on', S.coolant !== null && S.coolant >= 115);
+    lights.batt.classList.toggle('on', S.volt !== null && (S.volt < 11.8 || S.volt > 15.2));
+
+    requestAnimationFrame(render);
+  }
+
+  function clock() {
+    const d = new Date();
+    $('clock').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  setInterval(clock, 5000); clock();
+
+  function status(text, kind = '') {
+    $('status-text').textContent = text;
+    $('status').className = 'status ' + kind;
+  }
+
+  // ---------- Data sources ----------
+  let stopCurrent = () => {};
+  function resetValues() {
+    Object.assign(S, { speed: null, rpm: null, coolant: null, fuel: null, volt: null, throttle: null,
+                       mil: false, left: false, right: false, high: false });
+  }
+
+  function startDemo() {
+    resetValues();
+    const t0 = performance.now();
+    let prevSpeed = 0;
+    const id = setInterval(() => {
+      const t = (performance.now() - t0) / 1000;
+      const speed = Math.max(0, 85 + 75 * Math.sin(t / 7));
+      const gearSpan = 38;
+      S.speed = speed;
+      S.rpm = speed < 3 ? 750 : 1100 + ((speed % gearSpan) / gearSpan) * 3800;
+      S.throttle = Math.max(4, Math.min(95, 15 + (speed - prevSpeed) * 120));
+      prevSpeed = speed;
+      S.coolant = Math.min(92, 40 + t * 2);
+      S.fuel = 62; S.volt = 14.1;
+      const c = t % 24;
+      S.left = c > 2 && c < 6;
+      S.right = c > 14 && c < 18;
+      S.high = c > 8 && c < 12;
+      S.mil = c > 20 && c < 22;
+    }, 50);
+    status('Demo mode – fake data', 'warn');
+    return () => clearInterval(id);
+  }
+
+  function startGps() {
+    resetValues();
+    if (!('geolocation' in navigator)) { status('This browser has no GPS access', 'err'); return () => {}; }
+    status('GPS – waiting for signal…', 'warn');
+    const id = navigator.geolocation.watchPosition(p => {
+      S.speed = p.coords.speed === null ? 0 : p.coords.speed * 3.6;
+      status(`GPS – accuracy ±${Math.round(p.coords.accuracy)} m`, 'ok');
+    }, e => {
+      status(e.code === 1 ? 'GPS – location permission denied' : 'GPS – no signal', 'err');
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+    return () => navigator.geolocation.clearWatch(id);
+  }
+
+  // --- ELM327 OBD adapter ---
+  class Elm327 {
+    constructor(transport) {
+      this.t = transport; this.buf = ''; this.wait = null;
+      transport.onData(s => {
+        this.buf += s;
+        const i = this.buf.indexOf('>');
+        if (i >= 0 && this.wait) {
+          const reply = this.buf.slice(0, i);
+          this.buf = this.buf.slice(i + 1);
+          const w = this.wait; this.wait = null;
+          clearTimeout(w.timer); w.resolve(reply);
+        }
+      });
+    }
+    send(cmd, ms = 2500) {
+      return new Promise((resolve, reject) => {
+        this.buf = '';
+        const timer = setTimeout(() => { this.wait = null; reject(new Error('timeout ' + cmd)); }, ms);
+        this.wait = { resolve, timer };
+        Promise.resolve(this.t.write(cmd + '\r')).catch(err => { clearTimeout(timer); this.wait = null; reject(err); });
+      });
+    }
+  }
+
+  // Pull the data bytes for "01 xx" out of an ELM327 reply such as "410D3C".
+  function pidBytes(reply, pid) {
+    const s = reply.replace(/\s/g, '').toUpperCase();
+    const i = s.indexOf('41' + pid);
+    if (i < 0) return null;
+    const out = [];
+    for (let j = i + 4; j + 1 < s.length && out.length < 4; j += 2) {
+      const b = parseInt(s.substr(j, 2), 16);
+      if (isNaN(b)) break;
+      out.push(b);
+    }
+    return out.length ? out : null;
+  }
+
+  async function runObd(transport, isActive) {
+    const elm = new Elm327(transport);
+    status('OBD – waking adapter…', 'warn');
+    try { await elm.send('ATZ', 5000); } catch {}
+    for (const c of ['ATE0', 'ATL0', 'ATS0', 'ATH0', 'ATAT1', 'ATSP0']) {
+      try { await elm.send(c); } catch {}
+    }
+    status('OBD – talking to the car…', 'warn');
+    const hello = await elm.send('0100', 12000);
+    if (!pidBytes(hello, '00')) {
+      throw new Error('Car not answering. Is the ignition ON?');
+    }
+    status(`OBD – connected${transport.name ? ' to ' + transport.name : ''}`, 'ok');
+
+    let misses = 0, n = 0;
+    const ask = async (pid, len, fn) => {
+      try {
+        const b = pidBytes(await elm.send('01' + pid), pid);
+        misses = 0;
+        if (b && b.length >= len) fn(b);
+      } catch (e) {
+        if (++misses > 6) throw new Error('Lost connection to adapter');
+      }
+    };
+    while (isActive()) {
+      await ask('0D', 1, b => S.speed = b[0]);
+      await ask('0C', 2, b => S.rpm = (b[0] * 256 + b[1]) / 4);
+      if (n % 6 === 0) {
+        await ask('05', 1, b => S.coolant = b[0] - 40);
+        await ask('11', 1, b => S.throttle = b[0] * 100 / 255);
+      }
+      if (n % 30 === 0) {
+        await ask('2F', 1, b => S.fuel = b[0] * 100 / 255);
+        await ask('01', 1, b => S.mil = (b[0] & 0x80) !== 0);
+        try {
+          const v = parseFloat((await elm.send('ATRV')).replace(/[^\d.]/g, ''));
+          if (!isNaN(v)) S.volt = v;
+        } catch {}
+      }
+      n++;
+    }
+  }
+
+  // Bluetooth LE adapters (Web Bluetooth). Common ELM327 BLE service IDs.
+  const BLE_SERVICES = [0xfff0, 0xffe0, 0x18f0, 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'];
+  async function bleTransport() {
+    const dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: BLE_SERVICES });
+    status('OBD – connecting to ' + (dev.name || 'adapter') + '…', 'warn');
+    const server = await dev.gatt.connect();
+    let wr = null, nt = null;
+    for (const uuid of BLE_SERVICES) {
+      let svc;
+      try { svc = await server.getPrimaryService(uuid); } catch { continue; }
+      let w = null, n = null;
+      for (const c of await svc.getCharacteristics()) {
+        if (!n && (c.properties.notify || c.properties.indicate)) n = c;
+        if (!w && (c.properties.write || c.properties.writeWithoutResponse)) w = c;
+      }
+      if (w && n) { wr = w; nt = n; break; }
+    }
+    if (!wr) { dev.gatt.disconnect(); throw new Error('This device is not a supported OBD adapter'); }
+    await nt.startNotifications();
+    const dec = new TextDecoder(), enc = new TextEncoder();
+    let cb = () => {};
+    nt.addEventListener('characteristicvaluechanged', e => cb(dec.decode(e.target.value)));
+    return {
+      name: dev.name,
+      write: s => wr.properties.writeWithoutResponse
+        ? wr.writeValueWithoutResponse(enc.encode(s))
+        : wr.writeValue(enc.encode(s)),
+      onData: f => { cb = f; },
+      close: () => { try { dev.gatt.disconnect(); } catch {} }
+    };
+  }
+
+  // Classic Bluetooth adapters (Web Serial, Bluetooth serial port profile).
+  const SPP = '00001101-0000-1000-8000-00805f9b34fb';
+  async function serialTransport() {
+    const port = await navigator.serial.requestPort({ allowedBluetoothServiceClassIds: [SPP] });
+    status('OBD – opening adapter…', 'warn');
+    await port.open({ baudRate: 38400 });
+    const writer = port.writable.getWriter();
+    const reader = port.readable.getReader();
+    const enc = new TextEncoder(), dec = new TextDecoder();
+    let cb = () => {}, open = true;
+    (async () => {
+      try {
+        while (open) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) cb(dec.decode(value));
+        }
+      } catch {}
+    })();
+    return {
+      name: 'ELM327',
+      write: s => writer.write(enc.encode(s)),
+      onData: f => { cb = f; },
+      close: async () => {
+        open = false;
+        try { await reader.cancel(); } catch {}
+        try { reader.releaseLock(); writer.releaseLock(); await port.close(); } catch {}
+      }
+    };
+  }
+
+  function startObd(makeTransport) {
+    resetValues();
+    let active = true, transport = null;
+    (async () => {
+      try {
+        transport = await makeTransport();
+        if (!active) { transport.close(); return; }
+        await runObd(transport, () => active);
+      } catch (e) {
+        if (!active) return;
+        const msg = e && e.name === 'NotFoundError' ? 'No adapter chosen' : (e && e.message) || String(e);
+        status('OBD – ' + msg, 'err');
+      }
+    })();
+    return () => { active = false; if (transport) transport.close(); };
+  }
+
+  function setMode(mode) {
+    stopCurrent();
+    if (mode === 'demo') stopCurrent = startDemo();
+    else if (mode === 'gps') stopCurrent = startGps();
+    else if (mode === 'ble') stopCurrent = startObd(bleTransport);
+    else if (mode === 'serial') stopCurrent = startObd(serialTransport);
+    if (mode === 'demo' || mode === 'gps') store.set('mode', mode);
+  }
+
+  // ---------- Buttons ----------
+  const sheet = $('sheet');
+  if (!navigator.bluetooth) {
+    $('m-ble').disabled = true;
+    $('m-ble-note').textContent = 'Not available in this browser. Use Chrome on Android, opened from an https:// link.';
+  }
+  if (!navigator.serial) {
+    $('m-serial').disabled = true;
+    $('m-serial-note').textContent = 'Not available in this browser. Update Chrome, or use a Bluetooth LE adapter.';
+  }
+  $('b-connect').onclick = () => sheet.classList.add('open');
+  sheet.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (e.target === sheet || (b && b.dataset.mode === 'close')) { sheet.classList.remove('open'); return; }
+    if (b && b.dataset.mode) { sheet.classList.remove('open'); setMode(b.dataset.mode); keepAwake(); }
+  });
+
+  const unitsBtn = $('b-units');
+  const showUnits = () => { unitsBtn.textContent = units === 'mph' ? 'mph' : 'km/h'; };
+  unitsBtn.onclick = () => {
+    units = units === 'mph' ? 'kmh' : 'mph';
+    store.set('units', units);
+    speedo.build(speedoOpts());
+    showUnits();
+  };
+  showUnits();
+
+  const dimBtn = $('b-dim');
+  const showDim = () => {
+    $('app').classList.remove('dim1', 'dim2');
+    if (dim) $('app').classList.add('dim' + dim);
+    dimBtn.textContent = ['Bright', 'Dim', 'Night'][dim];
+  };
+  dimBtn.onclick = () => { dim = (dim + 1) % 3; store.set('dim', dim); showDim(); };
+  showDim();
+
+  $('b-full').onclick = async () => {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch {}
+    try { await screen.orientation.lock('landscape'); } catch {}
+    keepAwake();
+  };
+
+  // Keep the screen from turning off while the dashboard is open.
+  let wakeLock = null;
+  async function keepAwake() {
+    try { if (!wakeLock && navigator.wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } } catch {}
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+
+  setMode(store.get('mode', 'demo'));
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>
