@@ -74,8 +74,14 @@ It shows every message between the phone and the adapter.
 - A phone charging in a hot dashboard can overheat and its battery can swell. Keep it out of direct sun.
 - Unplug the adapter when the car is parked for days, because it slowly drains the battery.
 
+## Torque Pro theme
+
+If you use the **Torque Pro** app (it connects to the Wi-Fi adapter directly), there's a matching
+factory-style theme in [`torque-theme/`](torque-theme/README.md).
+
 ## Files
 
 - `index.html`: the whole dashboard
 - `sw.js`: lets it open with no internet
 - `manifest.json`, `icon.svg`: home-screen app icon
+- `torque-theme/`: the Torque Pro theme (ready-made zip in `torque-theme/dist/`)
